@@ -1,0 +1,23 @@
+{
+  "example_lead": {
+    "CNPJ": "67086934000169",
+    "Razão social": "IRACEMA DA ANGELICA PAES E DOCES LTDA",
+    "Nome Fantasia": "",
+    "Nome matriz": "IRACEMA DA ANGELICA PAES E DOCES LTDA",
+    "Município": "SP - São Paulo",
+    "Distrito": "Santa Cecília",
+    "Subdistrito": "Santa Cecília",
+    "CEP": "01227000",
+    "Bairro": "Santa Cecília",
+    "Endereço cadastral": "AVENIDA ANGELICA, 101",
+    "Endereço sugerido": "AVENIDA ANGELICA, 101",
+    "Coordenadas": "-23.533853,-46.65335",
+    "Street View": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=-23.533853,-46.65335"
+  },
+  "test_curl_commands": {
+    "health_check": "curl http://localhost:3000/api/health",
+    "create_lead_manual": "curl -X POST http://localhost:3000/api/leads -H 'Content-Type: application/json' -d '{ \"companyData\": { \"cnpj\": \"67086934000169\", \"companyName\": \"IRACEMA DA ANGELICA PAES E DOCES LTDA\", \"region\": \"sudeste\" }, \"address\": { \"street\": \"AVENIDA ANGELICA, 101\", \"neighborhood\": \"Santa Cecília\", \"city\": \"São Paulo\", \"state\": \"SP\", \"zipCode\": \"01227000\", \"coordinates\": { \"latitude\": -23.533853, \"longitude\": -46.65335 } }, \"source\": \"manual\", \"businessInfo\": { \"industry\": \"Doces e confeitaria\" }, \"validation\": { \"addressValidated\": true }, \"potential\": { \"score\": 65, \"level\": \"médio\", \"factors\": [\"Região sudeste\", \"Tipo de negócio: doces\"], \"confidence\": 70 }, \"status\": \"pending\" }'",
+    "list_leads": "curl http://localhost:3000/api/leads",
+    "get_stats": "curl http://localhost:3000/api/leads/stats"
+  }
+} 
