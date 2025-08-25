@@ -8,6 +8,10 @@ yarn-error.log*
 dist/
 build/
 
+# Data files (JSON persistence)
+data/
+*.json.bak
+
 # Environment variables
 .env
 .env.local
@@ -94,3 +98,4 @@ ehthumbs.db
 Thumbs.db 
 
 package-lock.json
+/src/generated/prisma
