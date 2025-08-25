@@ -1,0 +1,171 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo de usuários para autenticação
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  leads     Lead[]
+
+  @@map("users")
+}
+
+// Modelo principal de leads
+model Lead {
+  id        String   @id @default(cuid())
+  cnpj      String   @unique
+  source    String   @default("datlo") // datlo, manual, other
+  
+  // Dados da empresa
+  companyName    String
+  tradeName      String?
+  matrixName     String?
+  city           String
+  district       String
+  subdistrict    String
+  neighborhood   String
+  
+  // Endereço
+  streetAddress     String
+  suggestedAddress  String?
+  zipCode           String
+  coordinates       String? // formato: "-23.533853,-46.65335"
+  streetViewUrl     String?
+  
+  // Endereço validado
+  validatedStreet      String?
+  validatedNumber      String?
+  validatedComplement  String?
+  validatedNeighborhood String?
+  validatedCity        String?
+  validatedState       String?
+  validatedZipCode     String?
+  validatedCoordinates Json? // { latitude: number, longitude: number }
+  
+  // Informações de contato
+  phone    String?
+  email    String?
+  website  String?
+  
+  // Informações do negócio
+  industry           String?
+  estimatedEmployees Int?
+  estimatedRevenue   Float?
+  products           Json? // array de strings
+  
+  // Dados cadastrais da empresa
+  cnae               String? // Código CNAE
+  cnaeDescription    String? // Descrição da atividade CNAE
+  capitalSocial      Float?  // Capital social da empresa
+  foundationDate     DateTime? // Data de fundação
+  
+  // Sócios/Parceiros
+  partners           Json? // Array de sócios: [{ name, cpf, participation, role }]
+  
+  // Validação
+  addressValidated      Boolean @default(false)
+  addressValidationDate DateTime?
+  addressValidationSource String?
+  
+  // Análise de fachada (futuro)
+  facadeAnalyzed    Boolean @default(false)
+  facadeAnalysisDate DateTime?
+  facadeAnalysis    Json?
+  
+  // Potencial
+  potentialScore    Int     @default(0) // 0-100
+  potentialLevel    String  @default("baixo") // baixo, médio, alto
+  potentialFactors  Json    // array de strings
+  potentialConfidence Int   @default(0) // 0-100
+  
+  // Status do processamento
+  status            String  @default("aguardando") // aguardando, processando, processado, erro
+  processingError   String?
+  
+  // Observações do usuário
+  userNotes         String?   // Campo para observações do usuário
+  
+  // Metadados
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relacionamentos
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id])
+  
+  // Jobs de processamento
+  processingJobs ProcessingJob[] @relation("LeadProcessingJobs")
+
+  @@map("leads")
+}
+
+// Modelo para jobs de processamento
+model ProcessingJob {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation("LeadProcessingJobs", fields: [leadId], references: [id], onDelete: Cascade)
+  
+  // Status do job
+  status    String   @default("pending") // pending, processing, completed, failed
+  priority  Int      @default(0) // 0 = baixa, 1 = normal, 2 = alta
+  
+  // Progresso
+  currentStep String? // address_validation, cnpj_analysis, potential_calculation
+  progress   Int      @default(0) // 0-100
+  
+  // Resultados
+  result    Json?
+  error     String?
+  
+  // Metadados
+  createdAt DateTime @default(now())
+  startedAt DateTime?
+  completedAt DateTime?
+  
+  // Redis job ID
+  redisJobId String?
+
+  @@map("processing_jobs")
+}
+
+// Modelo para cache de CEPs
+model CepCache {
+  cep         String   @id
+  data        Json
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+  
+  @@map("cep_cache")
+}
+
+// Modelo para logs de processamento
+model ProcessingLog {
+  id        String   @id @default(cuid())
+  leadId    String?
+  jobId     String?
+  
+  // Informações do log
+  level     String   // info, warn, error
+  message   String
+  details   Json?
+  
+  // Metadados
+  createdAt DateTime @default(now())
+  
+  @@map("processing_logs")
+}
