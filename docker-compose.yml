@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: coco-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: coco_root_2024
+      MYSQL_DATABASE: coco_litoraneo
+      MYSQL_USER: coco_user
+      MYSQL_PASSWORD: coco_password_2024
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - coco-network
+
+  # Redis para filas de processamento
+  redis:
+    image: redis:7-alpine
+    container_name: coco-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - coco-network
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: coco-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: mysql://coco_user:coco_password_2024@mysql:3306/coco_litoraneo
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: coco-litoraneo-secret-key-2024-change-in-production
+      JWT_EXPIRES_IN: 7d
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
+      VIACEP_BASE_URL: https://viacep.com.br/ws
+      MAX_FILE_SIZE: 10485760
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./uploads:/app/uploads
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - coco-network
+    command: npm run dev
+
+  # Frontend React
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    container_name: coco-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      REACT_APP_API_URL: http://localhost:3000/api
+      CHOKIDAR_USEPOLLING: true
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - coco-network
+    command: npm start
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  coco-network:
+    driver: bridge
