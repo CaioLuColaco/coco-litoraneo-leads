@@ -574,21 +574,27 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
                 {/* Potencial */}
                 <td>
                   <div className="potential potential-tooltip" data-tooltip={generatePotentialTooltip(lead)}>
-                    <div className={`potential-badge ${lead.potentialLevel}`}>
-                      {lead.potentialLevel === 'alto' && '🟢'}
-                      {lead.potentialLevel === 'médio' && '🟡'}
-                      {lead.potentialLevel === 'baixo' && '🔴'}
-                      {lead.potentialLevel}
-                    </div>
-                    <div className="potential-score">{lead.potentialScore}/100</div>
-                    {lead.potentialConfidence && (
-                      <div className={`potential-confidence ${
-                        lead.potentialConfidence >= 80 ? 'high' : 
-                        lead.potentialConfidence >= 50 ? 'medium' : 'low'
-                      }`}>
-                        📊 {lead.potentialConfidence}% confiança
+                    <div className="potential-container">
+                      {/* Qualificação - Badge centralizado */}
+                      <div className={`potential-level ${lead.potentialLevel}`}>
+                        {lead.potentialLevel === 'alto' && '🟢'}
+                        {lead.potentialLevel === 'médio' && '🟡'}
+                        {lead.potentialLevel === 'baixo' && '🔴'}
+                        <span className="level-text">{lead.potentialLevel.toUpperCase()}</span>
                       </div>
-                    )}
+                      
+                      {/* Pontuação - Número centralizado */}
+                      <div className="potential-score">
+                        {lead.potentialScore}
+                      </div>
+                      
+                      {/* Confiança - Porcentagem centralizada */}
+                      {lead.potentialConfidence && (
+                        <div className="potential-confidence">
+                          {lead.potentialConfidence}% confiança
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </td>
 
