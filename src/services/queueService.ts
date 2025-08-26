@@ -85,15 +85,15 @@ export class QueueService {
       let created = 0;
       let skipped = 0;
 
-      // Processar leads em lotes de 3 para respeitar o rate limit (5/min)
-      const batchSize = 3;
+      // Processar leads em lotes para respeitar rate limit da API
+      const batchSize = 2; // Reduzido de 3 para 2 leads por lote
       const batches = [];
       
       for (let i = 0; i < leads.length; i += batchSize) {
         batches.push(leads.slice(i, i + batchSize));
       }
 
-      console.log(`📦 Processando em ${batches.length} lotes de até ${batchSize} leads`);
+      console.log(`📦 Processando ${leads.length} leads em ${batches.length} lotes de ${batchSize}`);
 
       for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
         const batch = batches[batchIndex];
@@ -138,7 +138,7 @@ export class QueueService {
             });
 
             // Delay progressivo para respeitar rate limit
-            const delay = batchIndex * 15000; // 15 segundos entre lotes
+            const delay = batchIndex * 30000; // 30 segundos entre lotes (aumentado de 15s)
             
             // Criar job de processamento
             const job = await this.leadProcessingQueue.add(
@@ -169,8 +169,8 @@ export class QueueService {
 
         // Aguardar entre lotes para respeitar rate limit
         if (batchIndex < batches.length - 1) {
-          console.log(`⏳ Aguardando 15 segundos antes do próximo lote...`);
-          await new Promise(resolve => setTimeout(resolve, 15000));
+          console.log(`⏳ Aguardando 30 segundos antes do próximo lote...`);
+          await new Promise(resolve => setTimeout(resolve, 30000)); // Aumentado de 15s para 30s
         }
       }
 
@@ -221,7 +221,14 @@ export class QueueService {
       await job.updateProgress(85);
       const companyData = await this.potentialAnalysisService.fetchCompanyData(leadData.CNPJ);
 
-      // 4. Atualizar lead com dados processados (100%)
+      // Log do resultado do enriquecimento
+      if (companyData) {
+        console.log(`✅ Dados enriquecidos para CNPJ ${leadData.CNPJ}: CNAE ${companyData.cnae}, Capital R$ ${companyData.capitalSocial}`);
+      } else {
+        console.log(`⚠️ Falha no enriquecimento para CNPJ ${leadData.CNPJ} - usando dados básicos`);
+      }
+
+      // 5. Atualizar lead com dados processados (100%)
       await job.updateProgress(100);
       await this.prisma.lead.update({
         where: { id: leadId },
@@ -245,15 +252,17 @@ export class QueueService {
           potentialFactors: finalPotential.factors,
           potentialConfidence: finalPotential.confidence,
           
-          // Dados cadastrais da empresa
+          // Dados cadastrais da empresa (com fallback para dados básicos)
           cnae: companyData?.cnae || null,
           cnaeDescription: companyData?.cnaeDescription || null,
           capitalSocial: companyData?.capitalSocial || null,
           foundationDate: companyData?.foundationDate ? new Date(companyData.foundationDate) : null,
-          partners: companyData?.partners || null,
+          partners: companyData?.partners ? JSON.parse(JSON.stringify(companyData.partners)) : null,
           
-          // Status
+          // Status (sempre processado, mesmo sem enriquecimento)
           status: 'processado',
+          // Campo adicional para indicar se foi enriquecido
+          processingError: companyData ? null : 'Falha no enriquecimento de dados cadastrais',
         },
       });
 

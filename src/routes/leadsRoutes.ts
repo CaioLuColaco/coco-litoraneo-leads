@@ -5,7 +5,7 @@ import { QueueService } from '../services/queueService';
 import { ExcelProcessingService } from '../services/excelProcessingService';
 import { AddressValidationService } from '../services/addressValidationService';
 import { PotentialAnalysisService } from '../services/potentialAnalysisService';
-import { Lead, LeadFilters, ApiResponse } from '../types/lead';
+import { PrismaLead, LeadFilters, ApiResponse } from '../types/lead';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -86,7 +86,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
     const total = await prisma.lead.count({ where });
 
-    const response: ApiResponse<Lead[]> = {
+    const response: ApiResponse<PrismaLead[]> = {
       success: true,
       data: leads,
       message: `${leads.length} leads encontrados`,
@@ -305,7 +305,7 @@ router.get('/cnpj/:cnpj', async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const response: ApiResponse<Lead> = {
+    const response: ApiResponse<PrismaLead> = {
       success: true,
       data: lead,
       message: 'Lead encontrado com sucesso',
@@ -342,7 +342,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const response: ApiResponse<Lead> = {
+    const response: ApiResponse<PrismaLead> = {
       success: true,
       data: lead,
       message: 'Lead encontrado com sucesso',
@@ -384,7 +384,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       data: leadData,
     });
 
-    const response: ApiResponse<Lead> = {
+    const response: ApiResponse<PrismaLead> = {
       success: true,
       data: newLead,
       message: 'Lead criado com sucesso',
@@ -602,7 +602,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
 
           // Lead sempre será encontrado se chegou até aqui
 
-    const response: ApiResponse<Lead> = {
+    const response: ApiResponse<PrismaLead> = {
       success: true,
       data: updatedLead,
       message: 'Lead atualizado com sucesso',
@@ -692,8 +692,18 @@ router.post(
       }
 
       // Valida o endereço
+      const addressToValidate = {
+        street: lead.streetAddress || '',
+        number: '',
+        complement: '',
+        neighborhood: lead.neighborhood || '',
+        city: lead.city || '',
+        state: '',
+        zipCode: lead.zipCode || '',
+      };
+      
       const validatedAddress = await addressValidationService.validateAddress(
-        lead.address
+        addressToValidate
       );
 
       // Atualiza o lead com o endereço validado
@@ -714,7 +724,7 @@ router.post(
         },
       });
 
-      const response: ApiResponse<Lead> = {
+      const response: ApiResponse<PrismaLead> = {
         success: true,
         data: updatedLead!,
         message: 'Endereço validado com sucesso',

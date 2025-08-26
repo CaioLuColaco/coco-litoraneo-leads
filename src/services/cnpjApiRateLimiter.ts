@@ -8,13 +8,13 @@ export class CnpjApiRateLimiter {
   constructor() {
     this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
     
-    // Limite: 5 consultas por minuto
+    // Limite: 4 consultas por minuto (mais conservador)
     this.rateLimiter = new RateLimiterRedis({
       storeClient: this.redis,
       keyPrefix: 'cnpj_api_rate_limit',
-      points: 5, // 5 consultas
+      points: 4, // 4 consultas (reduzido de 5 para 4)
       duration: 60, // por minuto
-      blockDuration: 60, // bloquear por 1 minuto se exceder
+      blockDuration: 120, // bloquear por 2 minutos se exceder (aumentado de 1 para 2)
     });
   }
 

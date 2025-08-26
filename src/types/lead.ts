@@ -97,6 +97,56 @@ export interface DatloRawData {
   'Street View': string; // URL do Street View
 }
 
+// Tipo para o modelo Prisma (banco de dados)
+export interface PrismaLead {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  source: string;
+  status: string;
+  email: string | null;
+  cnpj: string;
+  companyName: string;
+  tradeName: string | null;
+  matrixName: string | null;
+  city: string | null;
+  district: string | null;
+  subdistrict: string | null;
+  zipCode: string | null;
+  neighborhood: string | null;
+  streetAddress: string | null;
+  suggestedAddress: string | null;
+  coordinates: string | null;
+  streetViewUrl: string | null;
+  validatedStreet: string | null;
+  validatedNumber: string | null;
+  validatedComplement: string | null;
+  validatedNeighborhood: string | null;
+  validatedCity: string | null;
+  validatedState: string | null;
+  validatedZipCode: string | null;
+  validatedCoordinates: any; // JsonValue do Prisma
+  addressValidated: boolean;
+  addressValidationDate: Date | null;
+  addressValidationSource: string | null;
+  potentialScore: number;
+  potentialLevel: string;
+  potentialFactors: any; // JsonValue do Prisma
+  potentialConfidence: number;
+  industry: string | null;
+  estimatedEmployees: number | null;
+  estimatedRevenue: number | null;
+  products: any; // JsonValue do Prisma
+  cnae: string | null;
+  cnaeDescription: string | null;
+  capitalSocial: number | null;
+  foundationDate: Date | null;
+  partners: any; // JsonValue do Prisma
+  userNotes: string | null;
+  processingError: string | null;
+  userId: string | null;
+}
+
 // Interface para resposta da API
 export interface ApiResponse<T> {
   success: boolean;

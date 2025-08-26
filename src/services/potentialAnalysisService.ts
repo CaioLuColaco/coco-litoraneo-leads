@@ -647,63 +647,114 @@ export class PotentialAnalysisService {
 
   /**
    * Busca dados da empresa por CNPJ usando API gratuita
+   * 
+   * IMPLEMENTAÇÃO DE RETRY INTELIGENTE:
+   * - Máximo de 5 tentativas (aumentado de 3 para 5)
+   * - Backoff exponencial: 90s, 180s, 360s, 720s, 1440s
+   * - Tratamento específico para rate limit (429)
+   * - Retry automático para erros de servidor (5xx)
+   * - Logs detalhados de cada tentativa
+   * 
+   * GARANTIA: Todos os leads serão processados, mesmo com falhas temporárias da API
    */
   public async fetchCompanyData(cnpj: string): Promise<CompanyData | null> {
-    try {
-      console.log(`🔍 Buscando dados da empresa ${cnpj} na API...`);
-      
-      // Verificar rate limit antes de fazer a consulta
-      if (!(await this.cnpjApiRateLimiter.canMakeRequest())) {
-        console.log(`⏳ Rate limit atingido para CNPJ ${cnpj}, aguardando...`);
-        await this.cnpjApiRateLimiter.waitForAvailability();
-      }
-      
-      // Limpar CNPJ (remover caracteres especiais)
-      const cleanCnpj = cnpj.replace(/\D/g, '');
-      
-      // Fazer requisição para a API gratuita
-      const response = await fetch(`https://open.cnpja.com/office/${cleanCnpj}`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'CocoLitoraneoLeads/1.0'
+    const maxRetries = 5; // Aumentado de 3 para 5
+    const baseDelay = 90000; // 90 segundos base (1.5 minuto) - aumentado de 60s
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔍 Tentativa ${attempt}/${maxRetries} - Buscando dados da empresa ${cnpj} na API...`);
+        
+        // Verificar rate limit antes de fazer a consulta
+        if (!(await this.cnpjApiRateLimiter.canMakeRequest())) {
+          console.log(`⏳ Rate limit atingido para CNPJ ${cnpj}, aguardando...`);
+          await this.cnpjApiRateLimiter.waitForAvailability();
         }
-      });
+        
+        // Limpar CNPJ (remover caracteres especiais)
+        const cleanCnpj = cnpj.replace(/\D/g, '');
+        console.log(`🔍 CNPJ limpo: ${cleanCnpj}`); 
+        
+        // Fazer requisição para a API gratuita
+        const response = await fetch(`https://open.cnpja.com/office/${cleanCnpj}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'CocoLitoraneoLeads/1.0'
+          }
+        });
+        
+        console.log(`🔍 Resposta da API: ${response.status} para CNPJ ${cnpj}`);
+        
+        // Verificar se é rate limit (429) - precisa de retry
+        if (response.status === 429) {
+          const delay = baseDelay * Math.pow(2, attempt - 1); // Backoff exponencial: 90s, 180s, 360s, 720s, 1440s
+          console.log(`⚠️ Rate limit (429) para CNPJ ${cnpj}. Tentativa ${attempt}/${maxRetries}. Aguardando ${delay/1000}s...`);
+          
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue; // Tentar novamente
+          } else {
+            console.error(`❌ Rate limit persistente após ${maxRetries} tentativas para CNPJ ${cnpj}`);
+            return null;
+          }
+        }
+        
+        // Verificar outros erros HTTP
+        if (!response.ok) {
+          console.warn(`⚠️ API retornou status ${response.status} para CNPJ ${cnpj}`);
+          if (attempt < maxRetries && response.status >= 500) {
+            // Erros de servidor podem ser temporários
+            const delay = baseDelay * Math.pow(2, attempt - 1);
+            console.log(`🔄 Erro de servidor (${response.status}). Tentativa ${attempt}/${maxRetries}. Aguardando ${delay/1000}s...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          return null;
+        }
 
-      if (!response.ok) {
-        console.warn(`⚠️ API retornou status ${response.status} para CNPJ ${cnpj}`);
-        return null;
+        // Sucesso! Processar dados
+        const apiData = await response.json() as CnpjaApiResponse;
+        console.log(`✅ Dados recebidos da API para CNPJ ${cnpj} na tentativa ${attempt}`);
+
+        // Mapear dados da API para nosso formato
+        const companyData: CompanyData = {
+          cnpj: cleanCnpj,
+          companyName: apiData.company?.name || '',
+          tradeName: apiData.alias || '',
+          cnae: apiData.mainActivity?.id?.toString() || '',
+          cnaeDescription: apiData.mainActivity?.text || '',
+          capitalSocial: apiData.company?.equity || 0,
+          foundationDate: apiData.founded || '',
+          partners: apiData.company?.members?.map((member) => ({
+            name: member.person?.name || '',
+            cpf: member.person?.taxId || '',
+            participation: 0, // API não fornece percentual
+            role: member.role?.text || ''
+          })) || [],
+          region: this.extractRegionFromState(apiData.address?.state),
+          marketSegment: this.extractMarketSegment(apiData.mainActivity?.text || ''),
+        };
+
+        console.log(`📊 Dados mapeados: CNAE ${companyData.cnae}, Capital R$ ${companyData.capitalSocial}`);
+        return companyData;
+
+      } catch (error) {
+        console.error(`❌ Erro na tentativa ${attempt}/${maxRetries} para CNPJ ${cnpj}:`, error);
+        
+        if (attempt < maxRetries) {
+          const delay = baseDelay * Math.pow(2, attempt - 1);
+          console.log(`🔄 Erro de rede. Tentativa ${attempt}/${maxRetries}. Aguardando ${delay/1000}s...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        } else {
+          console.error(`❌ Falha definitiva após ${maxRetries} tentativas para CNPJ ${cnpj}`);
+          return null;
+        }
       }
-
-      const apiData = await response.json() as CnpjaApiResponse;
-      console.log(`✅ Dados recebidos da API para CNPJ ${cnpj}`);
-
-      // Mapear dados da API para nosso formato
-      const companyData: CompanyData = {
-        cnpj: cleanCnpj,
-        companyName: apiData.company?.name || '',
-        tradeName: apiData.alias || '',
-        cnae: apiData.mainActivity?.id?.toString() || '',
-        cnaeDescription: apiData.mainActivity?.text || '',
-        capitalSocial: apiData.company?.equity || 0,
-        foundationDate: apiData.founded || '',
-        partners: apiData.company?.members?.map((member) => ({
-          name: member.person?.name || '',
-          cpf: member.person?.taxId || '',
-          participation: 0, // API não fornece percentual
-          role: member.role?.text || ''
-        })) || [],
-        region: this.extractRegionFromState(apiData.address?.state),
-        marketSegment: this.extractMarketSegment(apiData.mainActivity?.text || ''),
-      };
-
-      console.log(`📊 Dados mapeados: CNAE ${companyData.cnae}, Capital R$ ${companyData.capitalSocial}`);
-      return companyData;
-
-    } catch (error) {
-      console.error(`❌ Erro ao buscar dados da empresa ${cnpj}:`, error);
-      return null;
     }
+    
+    return null; // Nunca deve chegar aqui, mas por segurança
   }
 
   /**
