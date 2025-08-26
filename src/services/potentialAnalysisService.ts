@@ -393,13 +393,13 @@ export class PotentialAnalysisService {
     const normalizedRegion = region.toLowerCase();
 
     if (highPotentialRegions.some(r => normalizedRegion.includes(r))) {
-      score += 20;
+      score += 25; // Aumentado de 20 para 25
       factors.push('Região de alto potencial de consumo');
     } else if (mediumPotentialRegions.some(r => normalizedRegion.includes(r))) {
-      score += 15;
+      score += 20; // Aumentado de 15 para 20
       factors.push('Região de médio potencial de consumo');
     } else {
-      score += 10;
+      score += 15; // Aumentado de 10 para 15
       factors.push('Região de baixo potencial de consumo');
     }
 
@@ -451,13 +451,13 @@ export class PotentialAnalysisService {
       const yearsInBusiness = now.getFullYear() - foundation.getFullYear();
 
       if (yearsInBusiness > 10) {
-        score += 15;
+        score += 18; // Aumentado de 15 para 18
         factors.push('Empresa estabelecida há mais de 10 anos');
       } else if (yearsInBusiness > 5) {
-        score += 10;
+        score += 15; // Aumentado de 10 para 15
         factors.push('Empresa estabelecida há 5-10 anos');
       } else if (yearsInBusiness > 2) {
-        score += 5;
+        score += 10; // Aumentado de 5 para 10
         factors.push('Empresa estabelecida há 2-5 anos');
       }
     } catch (error) {
@@ -807,5 +807,144 @@ export class PotentialAnalysisService {
    */
   public async close(): Promise<void> {
     await this.cnpjApiRateLimiter.close();
+  }
+
+  /**
+   * Retorna os detalhes da pontuação para exibição no frontend
+   * Centraliza toda a lógica de pontuação para evitar duplicação
+   */
+  getPotentialScoreDetails(data: {
+    cnae?: string;
+    capitalSocial?: number;
+    region?: string;
+    foundationDate?: string;
+    addressValidated?: boolean;
+    coordinates?: string;
+    partners?: any[];
+  }): {
+    totalScore: number;
+    level: 'baixo' | 'médio' | 'alto';
+    factors: Array<{ factor: string; points: number; description: string }>;
+    confidence: number;
+  } {
+    const factors: Array<{ factor: string; points: number; description: string }> = [];
+    let totalScore = 0;
+
+    // CNAE (maior peso - 50 pontos - aumentado de 45 para 50)
+    if (data.cnae) {
+      const cnaeScore = this.analyzeCnae(data.cnae);
+      totalScore += cnaeScore.score;
+      factors.push({
+        factor: 'CNAE',
+        points: cnaeScore.score,
+        description: cnaeScore.factors[0] || 'CNAE analisado'
+      });
+    }
+
+    // Capital Social (menor peso - 3-8 pontos)
+    if (data.capitalSocial) {
+      let capitalPoints = 0;
+      let capitalDescription = '';
+      
+      if (data.capitalSocial > 1000000) {
+        capitalPoints = 8;
+        capitalDescription = 'Capital social alto (>R$ 1M)';
+      } else if (data.capitalSocial > 100000) {
+        capitalPoints = 6;
+        capitalDescription = 'Capital social médio (R$ 100K - 1M)';
+      } else if (data.capitalSocial > 10000) {
+        capitalPoints = 4;
+        capitalDescription = 'Capital social baixo (R$ 10K - 100K)';
+      } else {
+        capitalPoints = 2;
+        capitalDescription = 'Capital social muito baixo (<R$ 10K)';
+      }
+      
+      totalScore += capitalPoints;
+      factors.push({
+        factor: 'Capital Social',
+        points: capitalPoints,
+        description: capitalDescription
+      });
+    }
+
+    // Região (15-25 pontos - aumentado de 10-20 para 15-25)
+    if (data.region) {
+      const regionScore = this.analyzeRegion(data.region);
+      totalScore += regionScore.score;
+      factors.push({
+        factor: 'Região',
+        points: regionScore.score,
+        description: regionScore.factors[0] || 'Região analisada'
+      });
+    }
+
+    // Data de fundação (8-18 pontos - aumentado de 5-15 para 8-18)
+    if (data.foundationDate) {
+      const foundationScore = this.analyzeFoundationDate(data.foundationDate);
+      totalScore += foundationScore.score;
+      factors.push({
+        factor: 'Data de Fundação',
+        points: foundationScore.score,
+        description: foundationScore.factors[0] || 'Data de fundação analisada'
+      });
+    }
+
+    // Endereço validado (12 pontos - aumentado de 10 para 12)
+    if (data.addressValidated) {
+      totalScore += 12;
+      factors.push({
+        factor: 'Endereço',
+        points: 12,
+        description: 'Endereço validado e confirmado'
+      });
+    }
+
+    // Coordenadas (6 pontos - aumentado de 5 para 6)
+    if (data.coordinates) {
+      totalScore += 6;
+      factors.push({
+        factor: 'Coordenadas',
+        points: 6,
+        description: 'Coordenadas geográficas disponíveis'
+      });
+    }
+
+    // Sócios (6 pontos - aumentado de 5 para 6)
+    if (data.partners && data.partners.length > 0) {
+      totalScore += 6;
+      factors.push({
+        factor: 'Sócios',
+        points: 6,
+        description: `${data.partners.length} sócio(s) identificado(s)`
+      });
+    }
+
+    // Normaliza o score para 0-100 (sem base artificial)
+    totalScore = Math.min(100, Math.max(0, totalScore));
+
+    // Determina o nível de potencial
+    let level: 'baixo' | 'médio' | 'alto';
+    if (totalScore >= 70) {
+      level = 'alto';
+    } else if (totalScore >= 40) {
+      level = 'médio';
+    } else {
+      level = 'baixo';
+    }
+
+    // Calcula confiança baseada na quantidade de dados disponíveis
+    const confidence = this.calculateConfidence({
+      cnae: data.cnae,
+      capitalSocial: data.capitalSocial,
+      region: data.region,
+    } as CompanyData);
+
+    return {
+      totalScore,
+      level,
+      factors,
+      confidence,
+    };
   }
 }

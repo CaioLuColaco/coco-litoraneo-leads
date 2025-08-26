@@ -15,6 +15,17 @@ export interface RegisterData {
   password: string;
 }
 
+export interface PotentialScoreDetails {
+  totalScore: number;
+  level: 'baixo' | 'médio' | 'alto';
+  factors: Array<{
+    factor: string;
+    points: number;
+    description: string;
+  }>;
+  confidence: number;
+}
+
 export interface Lead {
   id: string;
   cnpj: string;
@@ -42,6 +53,9 @@ export interface Lead {
   validatedState?: string;
   validatedZipCode?: string;
   validatedCoordinates?: any;
+  addressValidated?: boolean;
+  addressValidationDate?: string;
+  addressValidationSource?: string;
   
   // Potencial
   potentialScore: number;
@@ -54,6 +68,9 @@ export interface Lead {
   cnaeDescription?: string;
   capitalSocial?: number;
   foundationDate?: string;
+  industry?: string;
+  estimatedEmployees?: number;
+  estimatedRevenue?: number;
   
   // Sócios/Parceiros
   partners?: Array<{
@@ -65,11 +82,13 @@ export interface Lead {
   
   // Observações do usuário
   userNotes?: string;
+  processingError?: string;
   
   // Status
   status: string;
   createdAt: string;
   updatedAt: string;
+  userId?: string;
 }
 
 export interface ApiResponse<T> {

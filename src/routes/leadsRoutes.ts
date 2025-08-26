@@ -360,6 +360,53 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
+// GET /api/leads/:id/potential-details - Retorna detalhes da pontuação de potencial
+router.get('/:id/potential-details', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const lead = await prisma.lead.findUnique({
+      where: { id },
+    });
+
+    if (!lead) {
+      res.status(404).json({
+        success: false,
+        error: 'Lead não encontrado',
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    // Busca detalhes da pontuação usando o serviço centralizado
+    const potentialDetails = potentialAnalysisService.getPotentialScoreDetails({
+      cnae: lead.cnae || undefined,
+      capitalSocial: lead.capitalSocial || undefined,
+      region: lead.validatedState || undefined,
+      foundationDate: lead.foundationDate ? lead.foundationDate.toISOString() : undefined,
+      marketSegment: lead.industry || undefined,
+      addressValidated: lead.addressValidated || false,
+      coordinates: lead.validatedCoordinates ? 'disponível' : undefined,
+      partners: lead.partners || undefined,
+    });
+
+    const response: ApiResponse<typeof potentialDetails> = {
+      success: true,
+      data: potentialDetails,
+      message: 'Detalhes da pontuação obtidos com sucesso',
+      timestamp: new Date().toISOString(),
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('❌ Erro ao buscar detalhes da pontuação:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // POST /api/leads - Cria novo lead manualmente
 router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {

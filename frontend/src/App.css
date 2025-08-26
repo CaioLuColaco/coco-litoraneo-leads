@@ -605,12 +605,91 @@ code {
 /* Ações */
 .row-actions {
   display: flex;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 40px;
 }
 
 .edit-actions {
   display: flex;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Botões de ação verticais */
+.action-button {
+  width: 100%;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.action-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-button.edit {
+  background-color: #8b5cf6;
+  color: white;
+}
+
+.action-button.edit:hover {
+  background-color: #7c3aed;
+}
+
+.action-button.delete {
+  background-color: #EFEFEF;
+  color: white;
+}
+
+.action-button.delete:hover {
+  background-color: #4b5563;
+}
+
+/* Tooltip da pontuação */
+.potential-tooltip {
+  position: relative;
+  cursor: help;
+}
+
+.potential-tooltip:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #1f2937;
+  color: white;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  white-space: pre-line; /* Mudança: permite quebras de linha */
+  z-index: 1000;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 0.5rem;
+  text-align: center; /* Centraliza o texto */
+  min-width: 150px; /* Largura mínima para melhor legibilidade */
+  line-height: 1.4; /* Espaçamento entre linhas */
+}
+
+.potential-tooltip:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1f2937;
+  margin-bottom: -5px;
+  z-index: 1000;
 }
 
 .btn-sm {

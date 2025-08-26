@@ -228,7 +228,18 @@ export class QueueService {
         console.log(`⚠️ Falha no enriquecimento para CNPJ ${leadData.CNPJ} - usando dados básicos`);
       }
 
-      // 5. Atualizar lead com dados processados (100%)
+      // 5. Calcular detalhes da pontuação usando a nova função centralizada
+      const potentialDetails = this.potentialAnalysisService.getPotentialScoreDetails({
+        cnae: companyData?.cnae || null,
+        capitalSocial: companyData?.capitalSocial || null,
+        region: validatedAddress.state || null,
+        foundationDate: companyData?.foundationDate || null,
+        addressValidated: true,
+        coordinates: validatedAddress.coordinates ? 'disponível' : null,
+        partners: companyData?.partners || null,
+      });
+
+      // 6. Atualizar lead com dados processados (100%)
       await job.updateProgress(100);
       await this.prisma.lead.update({
         where: { id: leadId },
@@ -246,11 +257,11 @@ export class QueueService {
           addressValidationDate: new Date(),
           addressValidationSource: 'viacep',
           
-          // Potencial calculado
-          potentialScore: finalPotential.score,
-          potentialLevel: finalPotential.level,
-          potentialFactors: finalPotential.factors,
-          potentialConfidence: finalPotential.confidence,
+          // Potencial calculado usando a nova função centralizada
+          potentialScore: potentialDetails.totalScore,
+          potentialLevel: potentialDetails.level,
+          potentialFactors: potentialDetails.factors, // Agora são fatores estruturados
+          potentialConfidence: potentialDetails.confidence,
           
           // Dados cadastrais da empresa (com fallback para dados básicos)
           cnae: companyData?.cnae || null,

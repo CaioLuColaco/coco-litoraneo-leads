@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { Lead } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Lead, PotentialScoreDetails } from '../types';
 
 interface EditableLeadTableProps {
   leads: Lead[];
@@ -98,20 +98,20 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
   };
 
   // Funções de pesquisa e ordenação
-  const handleSort = useCallback((field: keyof Lead) => {
+  const handleSort = (field: keyof Lead) => {
     if (sortField === field) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
       setSortDirection('asc');
     }
-  }, [sortField]);
+  };
 
-  const handleFilterChange = useCallback((filterName: string, value: string) => {
+  const handleFilterChange = (filterName: string, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
-  }, []);
+  };
 
-  const clearFilters = useCallback(() => {
+  const clearFilters = () => {
     setFilters({
       status: '',
       potentialLevel: '',
@@ -119,7 +119,7 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
       cnae: '',
     });
     setSearchTerm('');
-  }, []);
+  };
 
   // Filtros e ordenação aplicados aos leads
   const filteredAndSortedLeads = useMemo(() => {
@@ -168,6 +168,103 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
 
     return filtered;
   }, [leads, searchTerm, filters, sortField, sortDirection]);
+
+  /**
+   * Busca os detalhes da pontuação da API do backend
+   */
+  const fetchPotentialDetails = async (leadId: string): Promise<PotentialScoreDetails | null> => {
+    try {
+      const response = await fetch(`/api/leads/${leadId}/potential-details`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.data;
+      }
+    } catch (error) {
+      console.error('Erro ao buscar detalhes da pontuação:', error);
+    }
+    return null;
+  };
+
+  /**
+   * Gera o tooltip da pontuação baseado nos dados do backend
+   */
+  const generatePotentialTooltip = (lead: Lead): string => {
+    // Se temos os detalhes da pontuação estruturados, usamos eles
+    if (lead.potentialFactors && Array.isArray(lead.potentialFactors)) {
+      const factors = lead.potentialFactors
+        .filter((factor: any) => factor && factor.factor && factor.points !== undefined)
+        .map((factor: any) => `${factor.factor}: ${factor.points} pts`);
+      
+      if (factors.length > 0) {
+        return factors.join('\n');
+      }
+    }
+    
+    // Fallback para dados básicos (quando não temos os detalhes estruturados)
+    const factors: string[] = [];
+    
+    if (lead.cnae) {
+      factors.push(`CNAE: 40 pts`);
+    }
+    
+    if (lead.capitalSocial) {
+      if (lead.capitalSocial > 1000000) {
+        factors.push(`Capital Social: 8 pts`);
+      } else if (lead.capitalSocial > 100000) {
+        factors.push(`Capital Social: 6 pts`);
+      } else if (lead.capitalSocial > 10000) {
+        factors.push(`Capital Social: 4 pts`);
+      } else {
+        factors.push(`Capital Social: 2 pts`);
+      }
+    }
+    
+    if (lead.validatedState) {
+      const state = lead.validatedState;
+      if (['SP', 'RJ', 'MG', 'RS', 'SC', 'PR'].includes(state)) {
+        factors.push(`Região: 15 pts`);
+      } else if (['BA', 'PE', 'CE', 'GO', 'MT'].includes(state)) {
+        factors.push(`Região: 10 pts`);
+      } else {
+        factors.push(`Região: 5 pts`);
+      }
+    }
+    
+    if (lead.foundationDate) {
+      const foundationYear = new Date(lead.foundationDate).getFullYear();
+      const currentYear = new Date().getFullYear();
+      const age = currentYear - foundationYear;
+      
+      if (age > 20) {
+        factors.push(`Data de fundação: 10 pts`);
+      } else if (age > 10) {
+        factors.push(`Data de fundação: 8 pts`);
+      } else if (age > 5) {
+        factors.push(`Data de fundação: 5 pts`);
+      } else {
+        factors.push(`Data de fundação: 2 pts`);
+      }
+    }
+    
+    if (lead.addressValidated) {
+      factors.push(`Endereço validado: 10 pts`);
+    }
+    
+    if (lead.validatedCoordinates) {
+      factors.push(`Coordenadas: 5 pts`);
+    }
+    
+    if (lead.partners && lead.partners.length > 0) {
+      factors.push(`Sócios: 5 pts`);
+    }
+    
+    // Se não temos fatores, retornamos uma mensagem padrão
+    if (factors.length === 0) {
+      return 'Pontuação baseada em dados limitados';
+    }
+    
+    return factors.join('\n');
+  };
 
   return (
     <div className="editable-table-container">
@@ -463,7 +560,7 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
 
                 {/* Potencial */}
                 <td>
-                  <div className="potential">
+                  <div className="potential potential-tooltip" data-tooltip={generatePotentialTooltip(lead)}>
                     <div className={`potential-badge ${lead.potentialLevel}`}>
                       {lead.potentialLevel === 'alto' && '🟢'}
                       {lead.potentialLevel === 'médio' && '🟡'}
@@ -501,31 +598,31 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
                     <div className="edit-actions">
                       <button
                         onClick={() => handleSave(lead.id)}
-                        className="btn btn-success btn-sm"
+                        className="action-button edit"
                         title="Salvar"
                       >
-                        ✅
+                        ✅ Salvar
                       </button>
                       <button
                         onClick={handleCancel}
-                        className="btn btn-secondary btn-sm"
+                        className="action-button delete"
                         title="Cancelar"
                       >
-                        ❌
+                        ❌ Cancelar
                       </button>
                     </div>
                   ) : (
                     <div className="row-actions">
                       <button
                         onClick={() => handleEdit(lead)}
-                        className="btn btn-primary btn-sm"
+                        className="action-button edit"
                         title="Editar"
                       >
                         ✏️
                       </button>
                       <button
                         onClick={() => handleDelete(lead.id)}
-                        className="btn btn-danger btn-sm"
+                        className="action-button delete"
                         title="Excluir"
                       >
                         🗑️
