@@ -383,7 +383,6 @@ router.get('/:id/potential-details', async (req: Request, res: Response): Promis
       capitalSocial: lead.capitalSocial || undefined,
       region: lead.validatedState || undefined,
       foundationDate: lead.foundationDate ? lead.foundationDate.toISOString() : undefined,
-      marketSegment: lead.industry || undefined,
       addressValidated: lead.addressValidated || false,
       coordinates: lead.validatedCoordinates ? 'disponível' : undefined,
       partners: lead.partners || undefined,
@@ -563,7 +562,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 // POST /api/leads/export - Exporta leads para Excel
 router.post('/export', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { filters } = req.body;
+    const { filters = {} } = req.body; // Valor padrão para filters
 
     // Busca leads com filtros
     const where: any = {};
