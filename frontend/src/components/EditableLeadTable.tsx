@@ -420,6 +420,17 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
               <th>Sócios</th>
               <th 
                 className="sortable-header"
+                onClick={() => handleSort('status')}
+              >
+                Status
+                {sortField === 'status' && (
+                  <span className="sort-indicator">
+                    {sortDirection === 'asc' ? ' ↑' : ' ↓'}
+                  </span>
+                )}
+              </th>
+              <th 
+                className="sortable-header"
                 onClick={() => handleSort('city')}
               >
                 Endereço
@@ -516,6 +527,17 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
                   ) : (
                     <span className="no-data">Não informado</span>
                   )}
+                </td>
+
+                {/* Status */}
+                <td>
+                  <div className={`status-badge ${lead.status}`}>
+                    {lead.status === 'processado' && '✅ Processado'}
+                    {lead.status === 'aguardando' && '⏳ Aguardando'}
+                    {lead.status === 'erro' && '❌ Erro'}
+                    {lead.status === 'processando' && '🔄 Processando'}
+                    {!lead.status && '❓ Desconhecido'}
+                  </div>
                 </td>
 
                 {/* Endereço */}

@@ -19,10 +19,10 @@ const LeadsProcessados: React.FC = () => {
   const loadLeads = async () => {
     try {
       setIsLoading(true);
-      const data = await leadsAPI.getProcessedLeads();
+      const data = await leadsAPI.getAllLeads(); // Mudança para buscar todos os leads
       setLeads(data);
     } catch (error: any) {
-      setError('Erro ao carregar leads processados. Tente novamente.');
+      setError('Erro ao carregar leads. Tente novamente.');
       console.error('Erro ao carregar leads:', error);
     } finally {
       setIsLoading(false);
@@ -130,9 +130,9 @@ const LeadsProcessados: React.FC = () => {
   if (isLoading) {
     return (
       <div className="container">
-        <div className="loading">
-          <div className="spinner"></div>
-          <p>Carregando leads processados...</p>
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Carregando leads...</p>
         </div>
       </div>
     );
@@ -144,7 +144,7 @@ const LeadsProcessados: React.FC = () => {
       <SalesforceWebhook baseUrl={apiBaseUrl} />
 
       <div className="page-header">
-        <h1>📊 Leads Processados</h1>
+        <h1>📊 Todos os Leads</h1>
       </div>
 
       {/* Cards de estatísticas */}
@@ -209,7 +209,7 @@ const LeadsProcessados: React.FC = () => {
         {leads.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">📊</div>
-            <h3 className="empty-title">Nenhum lead processado</h3>
+            <h3 className="empty-title">Nenhum lead encontrado</h3>
             <p className="empty-description">
               Faça upload de uma planilha na aba "Leads Enviados" para começar.
             </p>

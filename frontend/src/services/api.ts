@@ -52,7 +52,13 @@ export const authAPI = {
 };
 
 export const leadsAPI = {
-  // Buscar leads processados
+  // Buscar todos os leads (incluindo erros e pendentes)
+  getAllLeads: async (): Promise<Lead[]> => {
+    const response = await api.get<ApiResponse<Lead[]>>('/leads');
+    return response.data.data;
+  },
+
+  // Buscar leads processados (mantido para compatibilidade)
   getProcessedLeads: async (): Promise<Lead[]> => {
     const response = await api.get<ApiResponse<Lead[]>>('/leads?status=processado');
     return response.data.data;
