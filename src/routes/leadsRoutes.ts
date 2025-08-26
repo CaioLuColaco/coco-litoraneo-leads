@@ -446,12 +446,13 @@ router.get('/:id/potential-details', async (req: Request, res: Response): Promis
 
     // Busca detalhes da pontuação usando o serviço centralizado
     const potentialDetails = potentialAnalysisService.getPotentialScoreDetails({
+      cnpj: lead.cnpj,
       cnae: lead.cnae || undefined,
       capitalSocial: lead.capitalSocial || undefined,
       region: lead.validatedState || undefined,
       foundationDate: lead.foundationDate ? lead.foundationDate.toISOString() : undefined,
       addressValidated: lead.addressValidated || false,
-      coordinates: lead.validatedCoordinates ? 'disponível' : undefined,
+      coordinates: lead.coordinates || undefined,
       partners: lead.partners || undefined,
     });
 
@@ -864,5 +865,61 @@ router.post(
     }
   }
 );
+
+// POST /api/leads/:id/recalculate-confidence - Recalcula confiança de um lead existente
+router.post('/:id/recalculate-confidence', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const lead = await prisma.lead.findUnique({
+      where: { id },
+    });
+
+    if (!lead) {
+      res.status(404).json({
+        success: false,
+        error: 'Lead não encontrado',
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    // Recalcula confiança usando o serviço centralizado
+    const potentialDetails = potentialAnalysisService.getPotentialScoreDetails({
+      cnpj: lead.cnpj,
+      cnae: lead.cnae || undefined,
+      capitalSocial: lead.capitalSocial || undefined,
+      region: lead.validatedState || undefined,
+      foundationDate: lead.foundationDate ? lead.foundationDate.toISOString() : undefined,
+      addressValidated: lead.addressValidated || false,
+      coordinates: lead.coordinates || undefined,
+      partners: lead.partners || undefined,
+    });
+
+    // Atualiza o lead com a nova confiança
+    const updatedLead = await prisma.lead.update({
+      where: { id },
+      data: {
+        potentialConfidence: potentialDetails.confidence,
+        updatedAt: new Date(),
+      },
+    });
+
+    const response: ApiResponse<PrismaLead> = {
+      success: true,
+      data: updatedLead,
+      message: `Confiança recalculada: ${potentialDetails.confidence}%`,
+      timestamp: new Date().toISOString(),
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('❌ Erro ao recalcular confiança:', error);
+    res.status(500).json({
+      success: false,
+      error: `Erro ao recalcular confiança: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
 
 export { router as leadsRoutes };

@@ -86,7 +86,7 @@ export class QueueService {
       let skipped = 0;
 
       // Processar leads em lotes para respeitar rate limit da API
-      const batchSize = 2; // Reduzido de 3 para 2 leads por lote
+      const batchSize = 3; // Reduzido de 3 para 2 leads por lote
       const batches = [];
       
       for (let i = 0; i < leads.length; i += batchSize) {
@@ -138,7 +138,7 @@ export class QueueService {
             });
 
             // Delay progressivo para respeitar rate limit
-            const delay = batchIndex * 30000; // 30 segundos entre lotes (aumentado de 15s)
+            const delay = batchIndex * 30000; // 30 segundos
             
             // Criar job de processamento
             const job = await this.leadProcessingQueue.add(
@@ -230,13 +230,16 @@ export class QueueService {
 
       // 5. Calcular detalhes da pontuação usando a nova função centralizada
       const potentialDetails = this.potentialAnalysisService.getPotentialScoreDetails({
-        cnae: companyData?.cnae || null,
-        capitalSocial: companyData?.capitalSocial || null,
-        region: validatedAddress.state || null,
-        foundationDate: companyData?.foundationDate || null,
+        cnpj: leadData.CNPJ,
+        cnae: companyData?.cnae || undefined,
+        capitalSocial: companyData?.capitalSocial || undefined,
+        region: validatedAddress.state || undefined,
+        foundationDate: companyData?.foundationDate || undefined,
         addressValidated: true,
-        coordinates: validatedAddress.coordinates ? 'disponível' : null,
-        partners: companyData?.partners || null,
+        coordinates: leadData.Coordenadas || (validatedAddress.coordinates ? 'disponível' : undefined),
+        partners: companyData?.partners || undefined,
+        validatedState: validatedAddress.state || undefined,
+        validatedCoordinates: (leadData.Coordenadas || validatedAddress.coordinates) ? true : false,
       });
 
       // 6. Atualizar lead com dados processados (100%)

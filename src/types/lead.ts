@@ -29,6 +29,11 @@ export interface CompanyData {
   }>;
   region?: string;
   marketSegment?: string;
+  // Campos adicionais para confiança
+  validatedState?: string;
+  addressValidated?: boolean;
+  coordinates?: string;
+  validatedCoordinates?: boolean;
 }
 
 // Interface para análise de imagem da fachada

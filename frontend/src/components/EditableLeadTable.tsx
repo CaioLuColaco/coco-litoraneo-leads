@@ -34,6 +34,7 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
     potentialLevel: '',
     city: '',
     cnae: '',
+    confidence: '',
   });
 
   // Seleção de leads
@@ -123,6 +124,7 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
       potentialLevel: '',
       city: '',
       cnae: '',
+      confidence: '',
     });
     setSearchTerm('');
   };
@@ -146,8 +148,18 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
       const cnaeMatch = filters.cnae === '' || 
         (lead.cnae && lead.cnae.includes(filters.cnae)) ||
         (lead.cnaeDescription && lead.cnaeDescription.toLowerCase().includes(filters.cnae.toLowerCase()));
+      
+      // Filtro de confiança
+      let confidenceMatch = true;
+      if (filters.confidence === 'high') {
+        confidenceMatch = !!(lead.potentialConfidence && lead.potentialConfidence >= 80);
+      } else if (filters.confidence === 'medium') {
+        confidenceMatch = !!(lead.potentialConfidence && lead.potentialConfidence >= 50 && lead.potentialConfidence < 80);
+      } else if (filters.confidence === 'low') {
+        confidenceMatch = !!(lead.potentialConfidence && lead.potentialConfidence < 50);
+      }
 
-      return searchMatch && statusMatch && potentialMatch && cityMatch && cnaeMatch;
+      return searchMatch && statusMatch && potentialMatch && cityMatch && cnaeMatch && confidenceMatch;
     });
 
     // Ordenação
@@ -195,81 +207,60 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
    * Gera o tooltip da pontuação baseado nos dados do backend
    */
   const generatePotentialTooltip = (lead: Lead): string => {
-    // Se temos os detalhes da pontuação estruturados, usamos eles
     if (lead.potentialFactors && Array.isArray(lead.potentialFactors)) {
       const factors = lead.potentialFactors
         .filter((factor: any) => factor && factor.factor && factor.points !== undefined)
         .map((factor: any) => `${factor.factor}: ${factor.points} pts`);
       
       if (factors.length > 0) {
-        return factors.join('\n');
+        let tooltip = factors.join('\n');
+        
+        // Adiciona informação sobre confiança se disponível
+        if (lead.potentialConfidence) {
+          tooltip += `\n\n📊 Confiança: ${lead.potentialConfidence}%`;
+          if (lead.potentialConfidence >= 80) {
+            tooltip += ' (Alta confiança)';
+          } else if (lead.potentialConfidence >= 50) {
+            tooltip += ' (Confiança média)';
+          } else {
+            tooltip += ' (Baixa confiança)';
+          }
+        }
+        
+        return tooltip;
       }
     }
     
-    // Fallback para dados básicos (quando não temos os detalhes estruturados)
+    // Fallback para dados básicos
     const factors: string[] = [];
     
-    if (lead.cnae) {
-      factors.push(`CNAE: 40 pts`);
-    }
+    if (lead.cnae) factors.push(`CNAE: ${lead.cnae}`);
+    if (lead.capitalSocial) factors.push(`Capital: R$ ${lead.capitalSocial.toLocaleString('pt-BR')}`);
+    if (lead.validatedState) factors.push(`Região: ${lead.validatedState}`);
+    if (lead.foundationDate) factors.push(`Fundação: ${new Date(lead.foundationDate).getFullYear()}`);
+    if (lead.addressValidated) factors.push('Endereço validado');
+    if (lead.validatedCoordinates) factors.push('Coordenadas disponíveis');
+    if (lead.partners && Array.isArray(lead.partners) && lead.partners.length > 0) factors.push(`${lead.partners.length} sócio(s)`);
     
-    if (lead.capitalSocial) {
-      if (lead.capitalSocial > 1000000) {
-        factors.push(`Capital Social: 8 pts`);
-      } else if (lead.capitalSocial > 100000) {
-        factors.push(`Capital Social: 6 pts`);
-      } else if (lead.capitalSocial > 10000) {
-        factors.push(`Capital Social: 4 pts`);
-      } else {
-        factors.push(`Capital Social: 2 pts`);
-      }
-    }
-    
-    if (lead.validatedState) {
-      const state = lead.validatedState;
-      if (['SP', 'RJ', 'MG', 'RS', 'SC', 'PR'].includes(state)) {
-        factors.push(`Região: 15 pts`);
-      } else if (['BA', 'PE', 'CE', 'GO', 'MT'].includes(state)) {
-        factors.push(`Região: 10 pts`);
-      } else {
-        factors.push(`Região: 5 pts`);
-      }
-    }
-    
-    if (lead.foundationDate) {
-      const foundationYear = new Date(lead.foundationDate).getFullYear();
-      const currentYear = new Date().getFullYear();
-      const age = currentYear - foundationYear;
-      
-      if (age > 20) {
-        factors.push(`Data de fundação: 10 pts`);
-      } else if (age > 10) {
-        factors.push(`Data de fundação: 8 pts`);
-      } else if (age > 5) {
-        factors.push(`Data de fundação: 5 pts`);
-      } else {
-        factors.push(`Data de fundação: 2 pts`);
-      }
-    }
-    
-    if (lead.addressValidated) {
-      factors.push(`Endereço validado: 10 pts`);
-    }
-    
-    if (lead.validatedCoordinates) {
-      factors.push(`Coordenadas: 5 pts`);
-    }
-    
-    if (lead.partners && lead.partners.length > 0) {
-      factors.push(`Sócios: 5 pts`);
-    }
-    
-    // Se não temos fatores, retornamos uma mensagem padrão
     if (factors.length === 0) {
       return 'Pontuação baseada em dados limitados';
     }
     
-    return factors.join('\n');
+    let tooltip = factors.join('\n');
+    
+    // Adiciona informação sobre confiança se disponível
+    if (lead.potentialConfidence) {
+      tooltip += `\n\n📊 Confiança: ${lead.potentialConfidence}%`;
+      if (lead.potentialConfidence >= 80) {
+        tooltip += ' (Alta confiança)';
+      } else if (lead.potentialConfidence >= 50) {
+        tooltip += ' (Confiança média)';
+      } else {
+        tooltip += ' (Baixa confiança)';
+      }
+    }
+    
+    return tooltip;
   };
 
   return (
@@ -292,18 +283,6 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
         </div>
 
         <div className="filters-section">
-          <select
-            value={filters.status}
-            onChange={(e) => handleFilterChange('status', e.target.value)}
-            className="filter-select"
-          >
-            <option value="">Todos os status</option>
-            <option value="processado">Processado</option>
-            <option value="aguardando">Aguardando</option>
-            <option value="processando">Processando</option>
-            <option value="erro">Erro</option>
-          </select>
-
           <select
             value={filters.potentialLevel}
             onChange={(e) => handleFilterChange('potentialLevel', e.target.value)}
@@ -330,6 +309,17 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
             onChange={(e) => handleFilterChange('cnae', e.target.value)}
             className="filter-input"
           />
+
+          <select
+            value={filters.confidence}
+            onChange={(e) => handleFilterChange('confidence', e.target.value)}
+            className="filter-select"
+          >
+            <option value="">Todas as confianças</option>
+            <option value="high">Alta confiança (80%+)</option>
+            <option value="medium">Confiança média (50-79%)</option>
+            <option value="low">Baixa confiança (&lt;50%)</option>
+          </select>
 
           <button
             onClick={clearFilters}
@@ -591,6 +581,14 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
                       {lead.potentialLevel}
                     </div>
                     <div className="potential-score">{lead.potentialScore}/100</div>
+                    {lead.potentialConfidence && (
+                      <div className={`potential-confidence ${
+                        lead.potentialConfidence >= 80 ? 'high' : 
+                        lead.potentialConfidence >= 50 ? 'medium' : 'low'
+                      }`}>
+                        📊 {lead.potentialConfidence}% confiança
+                      </div>
+                    )}
                   </div>
                 </td>
 

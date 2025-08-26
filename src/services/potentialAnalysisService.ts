@@ -393,13 +393,13 @@ export class PotentialAnalysisService {
     const normalizedRegion = region.toLowerCase();
 
     if (highPotentialRegions.some(r => normalizedRegion.includes(r))) {
-      score += 25; // Aumentado de 20 para 25
+      score += 25;
       factors.push('Região de alto potencial de consumo');
     } else if (mediumPotentialRegions.some(r => normalizedRegion.includes(r))) {
-      score += 20; // Aumentado de 15 para 20
+      score += 15; 
       factors.push('Região de médio potencial de consumo');
     } else {
-      score += 15; // Aumentado de 10 para 15
+      score += 5;
       factors.push('Região de baixo potencial de consumo');
     }
 
@@ -554,19 +554,47 @@ export class PotentialAnalysisService {
 
   private calculateConfidence(companyData: CompanyData): number {
     let availableFields = 0;
-    const totalFields = 8; // CNPJ, nome, CNAE, capital, fundação, sócios, região, segmento
+    const totalFields = 8; // Campos relevantes para confiança (não todos os campos da interface)
 
-    if (companyData.cnpj) availableFields++;
-    if (companyData.companyName) availableFields++;
-    if (companyData.cnae) availableFields++;
-    if (companyData.capitalSocial) availableFields++;
-    if (companyData.foundationDate) availableFields++;
-    if (companyData.partners && companyData.partners.length > 0)
+    // Campos principais para confiança (8 campos)
+    if (companyData.cnpj) {
       availableFields++;
-    if (companyData.region) availableFields++;
-    if (companyData.marketSegment) availableFields++;
+    }
+    
+    if (companyData.cnae) {
+      availableFields++;
+    }
+    
+    if (companyData.capitalSocial) {
+      availableFields++;
+    }
+    
+    if (companyData.foundationDate) {
+      availableFields++;
+    }
+    
+    if (companyData.partners && Array.isArray(companyData.partners) && companyData.partners.length > 0) {
+      availableFields++;
+    }
+    
+    // Região (pode vir de region ou validatedState)
+    if (companyData.region || companyData.validatedState) {
+      availableFields++;
+    }
 
-    return Math.round((availableFields / totalFields) * 100);
+    // Endereço validado
+    if (companyData.addressValidated) {
+      availableFields++;
+    }
+
+    // Coordenadas (pode vir de validatedCoordinates ou coordinates brutas)
+    if (companyData.validatedCoordinates || companyData.coordinates) {
+      availableFields++;
+    }
+
+    const confidence = Math.round((availableFields / totalFields) * 100);
+    
+    return confidence;
   }
 
   /**
@@ -649,7 +677,7 @@ export class PotentialAnalysisService {
    * Busca dados da empresa por CNPJ usando API gratuita
    * 
    * IMPLEMENTAÇÃO DE RETRY INTELIGENTE:
-   * - Máximo de 5 tentativas (aumentado de 3 para 5)
+   * - Máximo de 5 tentativas 
    * - Backoff exponencial: 90s, 180s, 360s, 720s, 1440s
    * - Tratamento específico para rate limit (429)
    * - Retry automático para erros de servidor (5xx)
@@ -658,8 +686,8 @@ export class PotentialAnalysisService {
    * GARANTIA: Todos os leads serão processados, mesmo com falhas temporárias da API
    */
   public async fetchCompanyData(cnpj: string): Promise<CompanyData | null> {
-    const maxRetries = 5; // Aumentado de 3 para 5
-    const baseDelay = 90000; // 90 segundos base (1.5 minuto) - aumentado de 60s
+    const maxRetries = 5;
+    const baseDelay = 90000;
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -673,7 +701,6 @@ export class PotentialAnalysisService {
         
         // Limpar CNPJ (remover caracteres especiais)
         const cleanCnpj = cnpj.replace(/\D/g, '');
-        console.log(`🔍 CNPJ limpo: ${cleanCnpj}`); 
         
         // Fazer requisição para a API gratuita
         const response = await fetch(`https://open.cnpja.com/office/${cleanCnpj}`, {
@@ -683,8 +710,6 @@ export class PotentialAnalysisService {
             'User-Agent': 'CocoLitoraneoLeads/1.0'
           }
         });
-        
-        console.log(`🔍 Resposta da API: ${response.status} para CNPJ ${cnpj}`);
         
         // Verificar se é rate limit (429) - precisa de retry
         if (response.status === 429) {
@@ -814,13 +839,17 @@ export class PotentialAnalysisService {
    * Centraliza toda a lógica de pontuação para evitar duplicação
    */
   getPotentialScoreDetails(data: {
+    cnpj?: string;
+    companyName?: string;
     cnae?: string;
     capitalSocial?: number;
-    region?: string;
     foundationDate?: string;
+    partners?: any[];
+    region?: string;
     addressValidated?: boolean;
     coordinates?: string;
-    partners?: any[];
+    validatedState?: string; // Adicionado para suportar a nova lógica
+    validatedCoordinates?: boolean; // Adicionado para suportar a nova lógica
   }): {
     totalScore: number;
     level: 'baixo' | 'médio' | 'alto';
@@ -830,7 +859,6 @@ export class PotentialAnalysisService {
     const factors: Array<{ factor: string; points: number; description: string }> = [];
     let totalScore = 0;
 
-    // CNAE (maior peso - 50 pontos - aumentado de 45 para 50)
     if (data.cnae) {
       const cnaeScore = this.analyzeCnae(data.cnae);
       totalScore += cnaeScore.score;
@@ -841,7 +869,6 @@ export class PotentialAnalysisService {
       });
     }
 
-    // Capital Social (menor peso - 3-8 pontos)
     if (data.capitalSocial) {
       let capitalPoints = 0;
       let capitalDescription = '';
@@ -868,7 +895,6 @@ export class PotentialAnalysisService {
       });
     }
 
-    // Região (15-25 pontos - aumentado de 10-20 para 15-25)
     if (data.region) {
       const regionScore = this.analyzeRegion(data.region);
       totalScore += regionScore.score;
@@ -879,7 +905,6 @@ export class PotentialAnalysisService {
       });
     }
 
-    // Data de fundação (8-18 pontos - aumentado de 5-15 para 8-18)
     if (data.foundationDate) {
       const foundationScore = this.analyzeFoundationDate(data.foundationDate);
       totalScore += foundationScore.score;
@@ -890,7 +915,6 @@ export class PotentialAnalysisService {
       });
     }
 
-    // Endereço validado (12 pontos - aumentado de 10 para 12)
     if (data.addressValidated) {
       totalScore += 12;
       factors.push({
@@ -900,7 +924,6 @@ export class PotentialAnalysisService {
       });
     }
 
-    // Coordenadas (6 pontos - aumentado de 5 para 6)
     if (data.coordinates) {
       totalScore += 6;
       factors.push({
@@ -910,7 +933,6 @@ export class PotentialAnalysisService {
       });
     }
 
-    // Sócios (6 pontos - aumentado de 5 para 6)
     if (data.partners && data.partners.length > 0) {
       totalScore += 6;
       factors.push({
@@ -920,10 +942,8 @@ export class PotentialAnalysisService {
       });
     }
 
-    // Normaliza o score para 0-100 (sem base artificial)
     totalScore = Math.min(100, Math.max(0, totalScore));
 
-    // Determina o nível de potencial
     let level: 'baixo' | 'médio' | 'alto';
     if (totalScore >= 70) {
       level = 'alto';
@@ -935,9 +955,16 @@ export class PotentialAnalysisService {
 
     // Calcula confiança baseada na quantidade de dados disponíveis
     const confidence = this.calculateConfidence({
+      cnpj: data.cnpj,
       cnae: data.cnae,
       capitalSocial: data.capitalSocial,
-      region: data.region,
+      foundationDate: data.foundationDate,
+      partners: data.partners,
+      region: data.region || data.validatedState, // Usar validatedState se region não estiver disponível
+      validatedState: data.validatedState,
+      addressValidated: data.addressValidated,
+      validatedCoordinates: data.validatedCoordinates ? true : false,
+      coordinates: data.coordinates || data.validatedCoordinates ? 'disponível' : undefined,
     } as CompanyData);
 
     return {
