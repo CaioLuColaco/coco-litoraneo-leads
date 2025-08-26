@@ -6,6 +6,8 @@ interface EditableLeadTableProps {
   onUpdateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
   onDeleteLead: (id: string) => Promise<void>;
   onBulkDelete: (ids: string[]) => Promise<void>;
+  onExport: () => Promise<void>;
+  isExporting: boolean;
 }
 
 export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
@@ -13,6 +15,8 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
   onUpdateLead,
   onDeleteLead,
   onBulkDelete,
+  onExport,
+  isExporting,
 }) => {
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -330,6 +334,14 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
             className="btn btn-secondary btn-sm"
           >
             🗑️ Limpar Filtros
+          </button>
+
+          <button
+            onClick={onExport}
+            disabled={isExporting || leads.length === 0}
+            className="btn btn-excel btn-sm"
+          >
+            {isExporting ? 'Exportando...' : '📥 Exportar Excel'}
           </button>
         </div>
       </div>

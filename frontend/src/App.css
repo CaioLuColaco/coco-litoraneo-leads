@@ -43,6 +43,12 @@ code {
   border-color: #4338ca;
 }
 
+.page-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
 .btn-excel {
   background-color: #D1FAE5;
   color: #000000;

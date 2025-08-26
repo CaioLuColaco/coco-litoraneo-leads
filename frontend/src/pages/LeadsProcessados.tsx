@@ -108,17 +108,11 @@ const LeadsProcessados: React.FC = () => {
 
   return (
     <div className="container">
+      {/* Integração com Salesforce */}
+      <SalesforceWebhook baseUrl={apiBaseUrl} />
+
       <div className="page-header">
         <h1>📊 Leads Processados</h1>
-        <div className="page-actions">
-          <button
-            onClick={handleExport}
-            disabled={isExporting || leads.length === 0}
-            className="btn btn-excel"
-          >
-            {isExporting ? 'Exportando...' : '📥 Exportar Excel'}
-          </button>
-        </div>
       </div>
 
       {/* Cards de estatísticas */}
@@ -166,9 +160,6 @@ const LeadsProcessados: React.FC = () => {
         </div>
       )}
 
-      {/* Integração com Salesforce */}
-      <SalesforceWebhook baseUrl={apiBaseUrl} />
-
       {/* Mensagens de erro */}
       {error && (
         <div className="alert alert-error">
@@ -197,6 +188,8 @@ const LeadsProcessados: React.FC = () => {
             onUpdateLead={handleUpdateLead}
             onDeleteLead={handleDeleteLead}
             onBulkDelete={handleBulkDelete}
+            onExport={handleExport}
+            isExporting={isExporting}
           />
         )}
       </div>
