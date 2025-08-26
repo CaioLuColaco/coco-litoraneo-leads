@@ -54,123 +54,128 @@ Sistema completo para automação de validação de leads da Coco Litorâneo, in
 - **MySQL 8.0** para dados
 - **Redis 7** para filas
 
-## 🐳 **Instalação com Docker**
+---
 
-### **1. Pré-requisitos**
-- Docker e Docker Compose instalados
-- Git para clonar o repositório
+## 🐳 **GUIA COMPLETO PARA RODAR LOCALMENTE**
 
-### **2. Clonar e Configurar**
+### **📋 Pré-requisitos**
+- ✅ **Docker Desktop** instalado e rodando
+- ✅ **Git** para clonar o repositório
+- ✅ **Node.js 18+** (opcional, para desenvolvimento local)
+- ✅ **8GB RAM** disponível (recomendado)
+
+### **🚀 Passo a Passo**
+
+#### **1. Clonar o Repositório**
 ```bash
 git clone <repository-url>
 cd coco-litoraneo-leads
 ```
 
-### **3. Configurar Variáveis de Ambiente**
+#### **2. Configurar Variáveis de Ambiente**
 ```bash
+# Copiar arquivo de exemplo
 cp .env.example .env
+
+# Editar com suas configurações
+nano .env  # ou code .env
 ```
 
-Editar `.env` com suas configurações:
+**Configurações mínimas necessárias:**
 ```env
 # JWT (Autenticação)
-JWT_SECRET=sua-chave-secreta-aqui
+JWT_SECRET=coco-litoraneo-secret-key-2024-change-in-production
 JWT_EXPIRES_IN=7d
 
-# Google Maps API (opcional)
+# Google Maps API (opcional - para geocodificação)
 GOOGLE_MAPS_API_KEY=sua-api-key-aqui
 
-# Outras configurações
+# Ambiente
 NODE_ENV=development
+
+# Tamanho máximo de arquivo (10MB)
+MAX_FILE_SIZE=10485760
 ```
 
-### **4. Iniciar Serviços**
+#### **3. Iniciar Todos os Serviços**
 ```bash
-# Iniciar todos os serviços
-npm run docker:up
+# Iniciar todos os containers
+docker-compose up -d
 
+# Verificar status
+docker-compose ps
+```
+
+**Serviços que serão iniciados:**
+- 🗄️ **MySQL** (porta 3306)
+- 🔴 **Redis** (porta 6379)
+- ⚙️ **Backend** (porta 3000)
+- 🎨 **Frontend** (porta 3001)
+
+#### **4. Aguardar Inicialização**
+```bash
 # Ver logs em tempo real
-npm run docker:logs
+docker-compose logs -f
+
+# Aguardar mensagem: "🚀 Servidor rodando na porta 3000"
 ```
 
-### **5. Inicializar Banco de Dados**
-```bash
-# Aguardar MySQL estar disponível (pode levar alguns segundos)
-npm run db:init
-```
+#### **5. Acessar as Aplicações**
+- 🌐 **Frontend**: http://localhost:3001
+- ⚙️ **Backend API**: http://localhost:3000
+- 🗄️ **MySQL**: localhost:3306
+- 🔴 **Redis**: localhost:6379
 
-### **6. Acessar Aplicações**
-- **Backend API**: http://localhost:3000
-- **Frontend**: http://localhost:3001
-- **MySQL**: localhost:3306
-- **Redis**: localhost:6379
+#### **6. Primeiro Acesso**
+1. **Acesse** http://localhost:3001
+2. **Clique** em "Registrar"
+3. **Crie** sua conta
+4. **Faça login** no sistema
 
-## 🗄️ **Estrutura do Banco de Dados**
+---
 
-### **Tabelas Principais**
-- **`users`**: Usuários do sistema
-- **`leads`**: Leads processados
-- **`processing_jobs`**: Jobs de processamento
-- **`cep_cache`**: Cache de CEPs validados
-- **`processing_logs`**: Logs de processamento
+## 📚 **ROTAS DA API COMPLETAS**
 
-### **Status dos Leads**
-- **`aguardando`**: Lead criado, aguardando processamento
-- **`processando`**: Lead sendo processado
-- **`processado`**: Lead processado com sucesso
-- **`erro`**: Erro no processamento
+### **🔐 Autenticação**
+| **Método** | **Rota** | **Descrição** | **Body** |
+|------------|----------|---------------|----------|
+| `POST` | `/api/auth/register` | Registro de usuário | `{name, email, password}` |
+| `POST` | `/api/auth/login` | Login de usuário | `{email, password}` |
+| `GET` | `/api/auth/me` | Dados do usuário atual | Headers: `Authorization: Bearer <token>` |
 
-## 🔄 **Fluxo de Processamento**
+### **📊 Leads**
+| **Método** | **Rota** | **Descrição** | **Parâmetros** |
+|------------|----------|---------------|----------------|
+| `GET` | `/api/leads` | Listar todos os leads | Query: `status`, `potentialLevel`, `city`, `state`, `limit`, `offset` |
+| `GET` | `/api/leads/:id` | Buscar lead por ID | Params: `id` |
+| `GET` | `/api/leads/cnpj/:cnpj` | Buscar lead por CNPJ | Params: `cnpj` |
+| `POST` | `/api/leads/upload` | Upload de planilha Excel | Form: `file` |
+| `POST` | `/api/leads/export` | Exportar leads para Excel | Body: `{filters, selectedIds}` |
+| `PUT` | `/api/leads/:id` | Atualizar lead | Body: dados do lead |
+| `DELETE` | `/api/leads/:id` | Deletar lead | Params: `id` |
 
-### **1. Upload da Planilha**
-```
-Usuário → Frontend → Backend → Extração de dados → Fila Redis
-```
+### **📈 Estatísticas e Monitoramento**
+| **Método** | **Rota** | **Descrição** | **Resposta** |
+|------------|----------|---------------|--------------|
+| `GET` | `/api/leads/stats` | Estatísticas gerais dos leads | `{total, processed, pending, highPotential}` |
+| `GET` | `/api/leads/processing-stats` | Status da fila de processamento | `{totalJobs, waitingJobs, processingJobs, completedJobs, failedJobs}` |
+| `GET` | `/api/leads/cnpj-api-status` | Status da API de CNPJ | `{rateLimit, status, remainingQueries}` |
 
-### **2. Processamento Assíncrono**
-```
-Fila Redis → Worker → Validação de endereço → Análise de CNPJ → Cálculo de potencial → Banco de dados
-```
+### **🔧 Operações Especiais**
+| **Método** | **Rota** | **Descrição** | **Body** |
+|------------|----------|---------------|----------|
+| `POST` | `/api/leads/:id/validate-address` | Revalidar endereço de um lead | - |
+| `POST` | `/api/leads/:id/recalculate-confidence` | Recalcular confiança de um lead | - |
+| `POST` | `/api/leads/cleanup-duplicates` | Remover leads duplicados por CNPJ | - |
 
-### **3. Etapas de Processamento**
-1. **Validação de Endereço (25%)**
-   - Busca no ViaCEP com rate limiting
-   - Cache de resultados
-   - Fallback para dados originais
+### **🌐 Integração Externa**
+| **Método** | **Rota** | **Descrição** | **Acesso** |
+|------------|----------|---------------|------------|
+| `GET` | `/api/leads/salesforce-webhook` | Webhook para Salesforce | Público (sem autenticação) |
 
-2. **Análise de CNPJ (50%)**
-   - Busca de dados cadastrais
-   - Análise de CNAE, capital social, região
-   - Classificação de potencial
+---
 
-3. **Cálculo Final (75%)**
-   - Combinação de validações
-   - Score de 0-100
-   - Classificação (alto, médio, baixo)
-
-4. **Persistência (100%)**
-   - Salvamento no banco
-   - Atualização de status
-   - Logs de processamento
-
-## 📊 **APIs Disponíveis**
-
-### **Autenticação**
-- `POST /api/auth/register` - Registro de usuário
-- `POST /api/auth/login` - Login de usuário
-- `GET /api/auth/me` - Informações do usuário atual
-
-### **Leads**
-- `GET /api/leads` - Listar leads com filtros
-- `POST /api/leads/upload` - Upload de planilha
-- `GET /api/leads/stats` - Estatísticas dos leads
-- `POST /api/leads/export` - Exportar leads para Excel
-
-### **Monitoramento**
-- `GET /api/health` - Status da API
-- `GET /api/health/detailed` - Status detalhado
-
-## 🧪 **Testando o Sistema**
+## 🧪 **TESTANDO A API**
 
 ### **1. Criar Usuário de Teste**
 ```bash
@@ -183,7 +188,7 @@ curl -X POST http://localhost:3000/api/auth/register \
   }'
 ```
 
-### **2. Fazer Login**
+### **2. Fazer Login e Obter Token**
 ```bash
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
@@ -193,225 +198,337 @@ curl -X POST http://localhost:3000/api/auth/login \
   }'
 ```
 
-### **3. Upload de Planilha**
+**Resposta esperada:**
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": { "id", "name", "email" }
+  }
+}
+```
+
+### **3. Usar Token para Acessar Rotas Protegidas**
+```bash
+# Listar leads
+curl -X GET http://localhost:3000/api/leads \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI"
+
+# Ver estatísticas
+curl -X GET http://localhost:3000/api/leads/stats \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI"
+```
+
+### **4. Upload de Planilha**
 ```bash
 curl -X POST http://localhost:3000/api/leads/upload \
   -H "Authorization: Bearer SEU_TOKEN_AQUI" \
   -F "file=@planilha_exemplo.xlsx"
 ```
 
-### **4. Verificar Status**
+---
+
+## 🔧 **COMANDOS ÚTEIS**
+
+### **🐳 Docker**
 ```bash
-curl -X GET http://localhost:3000/api/leads/stats \
-  -H "Authorization: Bearer SEU_TOKEN_AQUI"
+# Iniciar todos os serviços
+docker-compose up -d
+
+# Parar todos os serviços
+docker-compose down
+
+# Ver logs em tempo real
+docker-compose logs -f
+
+# Ver logs de um serviço específico
+docker logs coco-backend
+docker logs coco-frontend
+
+# Reiniciar um serviço
+docker restart coco-backend
+
+# Rebuild de um serviço
+docker-compose up -d --build backend
 ```
 
-## 📁 **Estrutura do Projeto**
-
-```
-coco-litoraneo-leads/
-├── src/
-│   ├── config/           # Configurações (DB, Redis)
-│   ├── middleware/       # Middlewares (auth, error handling)
-│   ├── routes/           # Rotas da API
-│   ├── services/         # Lógica de negócio
-│   └── types/            # Tipos TypeScript
-├── frontend/             # Aplicação React
-├── prisma/               # Schema e migrações do banco
-├── scripts/              # Scripts de inicialização
-├── docker-compose.yml    # Configuração Docker
-├── Dockerfile.backend    # Docker do backend
-└── README.md             # Este arquivo
-```
-
-## 🔧 **Comandos Úteis**
-
-### **Desenvolvimento**
+### **🗄️ Banco de Dados**
 ```bash
-# Iniciar em modo desenvolvimento
-npm run dev
-
-# Compilar TypeScript
-npm run build
-
-# Linting e formatação
-npm run lint
-npm run format
-```
-
-### **Banco de Dados**
-```bash
-# Inicializar banco
-npm run db:init
-
-# Executar migrações
-npm run db:migrate
-
-# Gerar cliente Prisma
-npm run db:generate
+# Acessar MySQL
+docker exec -it coco-mysql mysql -u coco_user -p coco_litoraneo
 
 # Abrir Prisma Studio
-npm run db:studio
+docker exec coco-backend npx prisma studio --port 5555
+
+# Executar migrações
+docker exec coco-backend npx prisma db push
+
+# Reset completo do banco
+docker exec coco-backend npx prisma migrate reset --force
 ```
 
-### **Docker**
+### **📊 Monitoramento**
 ```bash
-# Iniciar serviços
-npm run docker:up
+# Ver status dos containers
+docker-compose ps
 
-# Parar serviços
-npm run docker:down
+# Ver uso de recursos
+docker stats
 
-# Ver logs
-npm run docker:logs
-
-# Reiniciar
-npm run docker:restart
+# Ver logs da fila Redis
+docker exec coco-redis redis-cli monitor
 ```
 
-## 📈 **Monitoramento e Logs**
+---
 
-### **Logs do Sistema**
-- **Backend**: Console + arquivos de log
-- **Frontend**: Console do navegador
-- **MySQL**: Logs do container Docker
-- **Redis**: Logs do container Docker
+## 🚨 **TROUBLESHOOTING**
 
-### **Métricas Disponíveis**
-- Total de leads processados
-- Status de processamento
-- Estatísticas da fila
-- Tempo de processamento
-- Taxa de sucesso/erro
+### **❌ Problemas Comuns e Soluções**
 
-## 🚨 **Troubleshooting**
-
-### **Problemas Comuns**
-
-#### **1. MySQL não conecta**
+#### **1. Container não inicia**
 ```bash
-# Verificar se o container está rodando
+# Verificar logs
+docker logs coco-backend
+
+# Verificar se as portas estão livres
+lsof -i :3000
+lsof -i :3001
+
+# Reiniciar Docker Desktop
+```
+
+#### **2. Erro de conexão com banco**
+```bash
+# Verificar se MySQL está rodando
 docker ps | grep mysql
 
 # Ver logs do MySQL
 docker logs coco-mysql
 
-# Reiniciar serviço
-npm run docker:restart
+# Aguardar inicialização completa
+docker-compose logs -f mysql
 ```
 
-#### **2. Redis não conecta**
+#### **3. Erro de Prisma**
 ```bash
-# Verificar status do Redis
-docker logs coco-redis
+# Regenerar cliente Prisma
+docker exec coco-backend npx prisma generate
 
-# Testar conexão
-docker exec -it coco-redis redis-cli ping
-```
-
-#### **3. Erro de migração**
-```bash
-# Limpar e recriar banco
-docker-compose down -v
-docker-compose up -d
-npm run db:init
+# Sincronizar banco
+docker exec coco-backend npx prisma db push
 ```
 
 #### **4. Frontend não carrega**
 ```bash
-# Verificar logs do frontend
+# Verificar se backend está rodando
+curl http://localhost:3000/api/health
+
+# Ver logs do frontend
 docker logs coco-frontend
 
-# Verificar se a API está rodando
-curl http://localhost:3000/api/health
+# Verificar variáveis de ambiente
+docker exec coco-frontend env | grep REACT_APP
 ```
+
+#### **5. Rate limiting das APIs**
+```bash
+# Ver status da API CNPJ
+curl http://localhost:3000/api/leads/cnpj-api-status
+
+# Aguardar reset do rate limit (5 consultas/minuto)
+```
+
+---
+
+## 📊 **SISTEMA DE PONTUAÇÃO**
+
+### **🎯 Como Funciona**
+O sistema utiliza uma **hierarquia de priorização inteligente**:
+
+1. **🥇 Prioridade 1**: Análise completa com dados da API CNPJ
+2. **🥈 Prioridade 2**: Análise básica por palavras-chave (fallback)
+
+### **📊 Fatores de Pontuação**
+- **🏢 CNAE**: 45-25 pontos (fator mais importante)
+- **💰 Capital Social**: 3-8 pontos
+- **🌍 Região**: 10-20 pontos
+- **📅 Data de Fundação**: 5-15 pontos
+- **🏠 Endereço Validado**: 12 pontos
+- **📝 Nome da Empresa**: 5-25 pontos (apenas fallback)
+
+### **📚 Documentação Completa**
+Veja `DOCUMENTACAO_SISTEMA_PONTUACAO.md` para detalhes completos do algoritmo.
+
+---
+
+## 🚀 **CHECKLIST DE MELHORIAS FUTURAS**
+
+### **🔥 Prioridade Alta**
+- [ ] **Sistema de Notificações**
+  - [ ] Email para leads de alto potencial
+  - [ ] Push notifications no frontend
+  - [ ] Webhooks para sistemas externos
+
+- [ ] **Dashboard Avançado**
+  - [ ] Gráficos de performance
+  - [ ] Métricas de conversão
+  - [ ] Análise de ROI por lead
+
+- [ ] **Integração com CRM**
+  - [ ] Salesforce nativo
+
+### **⚡ Prioridade Média**
+- [ ] **Machine Learning**
+  - [ ] Predição de conversão
+  - [ ] Otimização automática de pesos
+  - [ ] Detecção de padrões
+
+- [ ] **Sistema de Workflow**
+  - [ ] Etapas de qualificação
+  - [ ] Aprovações em múltiplos níveis
+  - [ ] Automação de follow-up
+
+- [ ] **Relatórios Avançados**
+  - [ ] Exportação em PDF
+  - [ ] Relatórios agendados
+  - [ ] Templates personalizáveis
+
+### **🎨 Prioridade Baixa**
+- [ ] **Interface Mobile**
+  - [ ] App React Native
+  - [ ] PWA responsiva
+
+- [ ] **Integrações Adicionais**
+  - [ ] WhatsApp Business API
+  - [ ] LinkedIn Sales Navigator
+
+- [ ] **Funcionalidades Avançadas**
+  - [ ] Sistema de tags
+  - [ ] Histórico de interações
+  - [ ] Score de engajamento
+
+### **🔒 Segurança e Performance**
+- [ ] **Auditoria e Compliance**
+  - [ ] Logs de auditoria
+  - [ ] LGPD compliance
+  - [ ] Backup automático
+
+- [ ] **Escalabilidade**
+  - [ ] Load balancing
+  - [ ] Cache distribuído
+  - [ ] Microserviços
+
+- [ ] **Monitoramento**
+  - [ ] APM (Application Performance Monitoring)
+  - [ ] Alertas automáticos
+  - [ ] Métricas de negócio
+
+### **📱 Experiência do Usuário**
+- [ ] **Onboarding**
+  - [ ] Tutorial interativo
+  - [ ] Vídeos explicativos
+  - [ ] Documentação contextual
+
+- [ ] **Personalização**
+  - [ ] Temas customizáveis
+  - [ ] Dashboard personalizável
+  - [ ] Preferências de usuário
+
+- [ ] **Acessibilidade**
+  - [ ] Suporte a leitores de tela
+  - [ ] Navegação por teclado
+  - [ ] Alto contraste
+
+---
+
+## 📁 **ESTRUTURA DO PROJETO**
+
+```
+coco-litoraneo-leads/
+├── 📁 src/                    # Código fonte do backend
+│   ├── 📁 config/            # Configurações (DB, Redis)
+│   ├── 📁 middleware/        # Middlewares (auth, error handling)
+│   ├── 📁 routes/            # Rotas da API
+│   ├── 📁 services/          # Lógica de negócio
+│   └── 📁 types/             # Tipos TypeScript
+├── 📁 frontend/              # Aplicação React
+├── 📁 prisma/                # Schema e migrações do banco
+├── 📁 scripts/               # Scripts de inicialização
+├── 📁 uploads/               # Arquivos temporários
+├── 📁 mysql/                 # Dados do MySQL
+├── 📁 dist/                  # Build do TypeScript
+├── 📄 docker-compose.yml     # Configuração Docker
+├── 📄 Dockerfile.backend     # Docker do backend
+├── 📄 package.json           # Dependências do projeto
+├── 📄 .env.example           # Exemplo de variáveis de ambiente
+├── 📄 DOCUMENTACAO_SISTEMA_PONTUACAO.md  # Documentação do sistema de pontuação
+└── 📄 README.md              # Este arquivo
+```
+
+---
 
 ## 🔒 **Segurança**
 
-### **Implementado**
-- ✅ Hash de senhas com bcrypt (12 rounds)
-- ✅ JWT com expiração configurável
-- ✅ Rate limiting para APIs externas
-- ✅ Validação de entrada em todas as rotas
-- ✅ CORS configurado adequadamente
+### **✅ Implementado**
+- Hash de senhas com bcrypt (12 rounds)
+- JWT com expiração configurável
+- Rate limiting para APIs externas
+- Validação de entrada em todas as rotas
+- CORS configurado adequadamente
 
-### **Recomendações para Produção**
-- 🔐 Alterar `JWT_SECRET` para chave única e segura
-- 🔐 Configurar HTTPS
-- 🔐 Implementar rate limiting para APIs internas
-- 🔐 Configurar backup automático do banco
-- 🔐 Monitoramento de segurança
+### **🔐 Recomendações para Produção**
+- Alterar `JWT_SECRET` para chave única e segura
+- Configurar HTTPS
+- Implementar rate limiting para APIs internas
+- Configurar backup automático do banco
+- Monitoramento de segurança
+
+---
 
 ## 📊 **Performance**
 
-### **Capacidades**
+### **🚀 Capacidades Atuais**
 - **Processamento**: 5 leads simultâneos
 - **Fila**: Suporte a 20.000+ leads
 - **Cache**: CEPs validados por 24 horas
 - **Rate Limiting**: 1 segundo entre requisições ViaCEP
 
-### **Otimizações**
+### **⚡ Otimizações Implementadas**
 - Cache de CEPs no banco de dados
 - Processamento assíncrono com filas
 - Rate limiting inteligente
 - Batch processing para grandes volumes
+- Automação de `prisma generate` no startup
 
-## 🚀 **Deploy para Produção**
-
-### **1. Configurações de Produção**
-```env
-NODE_ENV=production
-JWT_SECRET=chave-super-secreta-e-unica
-DATABASE_URL=mysql://user:pass@host:3306/database
-REDIS_URL=redis://host:6379
-```
-
-### **2. Comandos de Deploy**
-```bash
-# Build de produção
-npm run build
-
-# Migrações do banco
-npm run db:migrate
-
-# Iniciar serviços
-npm run docker:up
-```
-
-### **3. Monitoramento**
-- Configurar logs estruturados
-- Implementar métricas de negócio
-- Configurar alertas de erro
-- Monitorar performance da fila
+---
 
 ## 🤝 **Contribuição**
 
-### **Como Contribuir**
+### **📝 Como Contribuir**
 1. Fork o projeto
 2. Crie uma branch para sua feature
 3. Commit suas mudanças
 4. Push para a branch
 5. Abra um Pull Request
 
-### **Padrões de Código**
+### **🎯 Padrões de Código**
 - TypeScript strict mode
 - ESLint + Prettier
 - Commits semânticos
 - Testes para novas funcionalidades
 
-## 📄 **Licença**
-
-Este projeto é propriedade da **Coco Litorâneo** e é destinado ao uso interno da empresa.
+---
 
 ## 📞 **Suporte**
 
 Para suporte técnico ou dúvidas:
-- **Equipe de Desenvolvimento**: dev@cocolitoraneo.com
-- **Documentação**: Este README
+- **Documentação**: Este README + DOCUMENTACAO_SISTEMA_PONTUACAO.md
 - **Issues**: Repositório interno
 
 ---
 
 **🥥 Coco Litorâneo - Sistema de Validação de Leads**
-**🚀 Versão 2.0 - Com Docker, MySQL e Filas Assíncronas**
-**📅 Última atualização: Agosto 2024** 
+**🚀 Versão 1.0 - Com Docker, MySQL e Filas Assíncronas**
+**📅 Última atualização: Agosto 2025**
+**📚 Documentação completa atualizada** 

@@ -143,7 +143,7 @@ if (!companyData.cnae && !companyData.capitalSocial && !companyData.marketSegmen
 ```typescript
 const highPotentialKeywords = [
   'supermercado', 'hipermercado', 'mercado', 'varejo',
-  'padaria', 'confeitaria', 'doces', 'bolos',
+  'padaria', 'panificadora', 'confeitaria', 'doces', 'bolos',
   'restaurante', 'lanchonete', 'alimentacao', 'alimentos',
   'industria', 'fabrica', 'producao',
   'distribuidora', 'atacado', 'comercio'
@@ -390,5 +390,5 @@ Confiança = (Campos Disponíveis / Total de Campos) × 100
 **📚 Esta documentação deve ser atualizada sempre que houver mudanças no sistema de pontuação, novos fatores forem adicionados ao algoritmo, ou ajustes na lógica de priorização.**
 
 **🔄 Última atualização:** Agosto 2025
-**📋 Versão:** 2.0 (com lógica de priorização)
-**👨‍💻 Responsável:** Equipe de Desenvolvimento Coco Litorâneo
+**📋 Versão:** 1.0
+**👨‍💻 Responsável:** Senior Software Engineer - Caio Lucena Colaço
