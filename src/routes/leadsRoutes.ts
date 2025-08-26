@@ -324,7 +324,7 @@ router.get('/cnpj/:cnpj', async (req: Request, res: Response): Promise<void> => 
 });
 
 // GET /api/leads/salesforce-webhook - Endpoint para Salesforce importar leads
-router.get('/salesforce-webhook', async (req: Request, res: Response): Promise<void> => {
+router.get('/salesforce-webhook', async (_req: Request, res: Response): Promise<void> => {
   try {
     // Buscar apenas leads processados
     const leads = await prisma.lead.findMany({
@@ -453,7 +453,7 @@ router.get('/:id/potential-details', async (req: Request, res: Response): Promis
       foundationDate: lead.foundationDate ? lead.foundationDate.toISOString() : undefined,
       addressValidated: lead.addressValidated || false,
       coordinates: lead.coordinates || undefined,
-      partners: lead.partners || undefined,
+      partners: Array.isArray(lead.partners) ? lead.partners : undefined,
     });
 
     const response: ApiResponse<typeof potentialDetails> = {
@@ -892,7 +892,7 @@ router.post('/:id/recalculate-confidence', async (req: Request, res: Response): 
       foundationDate: lead.foundationDate ? lead.foundationDate.toISOString() : undefined,
       addressValidated: lead.addressValidated || false,
       coordinates: lead.coordinates || undefined,
-      partners: lead.partners || undefined,
+      partners: Array.isArray(lead.partners) ? lead.partners : undefined,
     });
 
     // Atualiza o lead com a nova confiança

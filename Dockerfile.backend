@@ -13,10 +13,13 @@ RUN apk add --no-cache \
 COPY package*.json ./
 
 # Instalar dependências
-RUN npm ci --only=production
+RUN npm ci
 
 # Copiar código fonte
 COPY . .
+
+# Gerar Prisma Client durante o build
+RUN npx prisma generate
 
 # Compilar TypeScript
 RUN npm run build
@@ -28,4 +31,4 @@ RUN mkdir -p uploads
 EXPOSE 3000
 
 # Comando padrão
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev"]
