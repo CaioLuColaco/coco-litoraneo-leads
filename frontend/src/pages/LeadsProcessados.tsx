@@ -113,7 +113,7 @@ const LeadsProcessados: React.FC = () => {
           <button
             onClick={handleExport}
             disabled={isExporting || leads.length === 0}
-            className="btn btn-primary"
+            className="btn btn-excel"
           >
             {isExporting ? 'Exportando...' : '📥 Exportar Excel'}
           </button>

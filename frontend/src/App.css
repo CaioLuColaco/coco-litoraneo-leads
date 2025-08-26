@@ -43,6 +43,17 @@ code {
   border-color: #4338ca;
 }
 
+.btn-excel {
+  background-color: #D1FAE5;
+  color: #000000;
+  border-color: #D1FAE5;
+}
+
+.btn-excel:hover {
+  background-color: #48C50F;
+  border-color: #48C50F;
+}
+
 .btn-success {
   background-color: #059669;
   color: white;
