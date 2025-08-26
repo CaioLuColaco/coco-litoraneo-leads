@@ -96,6 +96,14 @@ export const leadsAPI = {
     return response.data;
   },
 
+  // Exportar leads selecionados
+  exportSelectedLeads: async (data: { filters: { selectedIds: string[] } }): Promise<Blob> => {
+    const response = await api.post('/leads/export', data, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
   // Estatísticas
   getStats: async () => {
     const response = await api.get<ApiResponse<any>>('/leads/stats');

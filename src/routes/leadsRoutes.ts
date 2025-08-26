@@ -634,16 +634,22 @@ router.post('/export', async (req: Request, res: Response): Promise<void> => {
     // Busca leads com filtros
     const where: any = {};
     
-    if (filters.status) where.status = filters.status;
-    if (filters.potentialLevel) where.potentialLevel = filters.potentialLevel;
-    if (filters.city) where.validatedCity = { contains: filters.city, mode: 'insensitive' };
-    if (filters.state) where.validatedState = { contains: filters.state, mode: 'insensitive' };
-    if (filters.industry) where.industry = { contains: filters.industry, mode: 'insensitive' };
-    
-    if (filters.dateFrom || filters.dateTo) {
-      where.createdAt = {};
-      if (filters.dateFrom) where.createdAt.gte = new Date(filters.dateFrom);
-      if (filters.dateTo) where.createdAt.lte = new Date(filters.dateTo);
+    // Se IDs específicos foram fornecidos, exportar apenas esses
+    if (filters.selectedIds && Array.isArray(filters.selectedIds) && filters.selectedIds.length > 0) {
+      where.id = { in: filters.selectedIds };
+    } else {
+      // Filtros normais se não houver IDs específicos
+      if (filters.status) where.status = filters.status;
+      if (filters.potentialLevel) where.potentialLevel = filters.potentialLevel;
+      if (filters.city) where.validatedCity = { contains: filters.city, mode: 'insensitive' };
+      if (filters.state) where.validatedState = { contains: filters.state, mode: 'insensitive' };
+      if (filters.industry) where.industry = { contains: filters.industry, mode: 'insensitive' };
+      
+      if (filters.dateFrom || filters.dateTo) {
+        where.createdAt = {};
+        if (filters.dateFrom) where.createdAt.gte = new Date(filters.dateFrom);
+        if (filters.dateTo) where.createdAt.lte = new Date(filters.dateTo);
+      }
     }
 
     const leads = await prisma.lead.findMany({
@@ -670,9 +676,12 @@ router.post('/export', async (req: Request, res: Response): Promise<void> => {
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
+    
+    // Nome do arquivo baseado no tipo de exportação
+    const fileName = filters.selectedIds ? 'leads_selecionados' : 'leads_export';
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename=leads_export_${new Date().toISOString().split('T')[0]}.xlsx`
+      `attachment; filename=${fileName}_${new Date().toISOString().split('T')[0]}.xlsx`
     );
     res.setHeader('Content-Length', excelBuffer.length.toString());
 

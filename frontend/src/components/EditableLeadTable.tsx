@@ -7,6 +7,7 @@ interface EditableLeadTableProps {
   onDeleteLead: (id: string) => Promise<void>;
   onBulkDelete: (ids: string[]) => Promise<void>;
   onExport: () => Promise<void>;
+  onExportSelected: (selectedIds: string[]) => Promise<void>;
   isExporting: boolean;
 }
 
@@ -16,6 +17,7 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
   onDeleteLead,
   onBulkDelete,
   onExport,
+  onExportSelected,
   isExporting,
 }) => {
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
@@ -352,12 +354,21 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
           <span className="selected-count">
             {selectedLeads.size} lead(s) selecionado(s)
           </span>
-          <button
-            onClick={handleBulkDelete}
-            className="btn btn-danger btn-sm"
-          >
-            🗑️ Excluir Selecionados
-          </button>
+          <div className="bulk-buttons">
+            <button
+              onClick={() => onExportSelected(Array.from(selectedLeads))}
+              disabled={isExporting}
+              className="btn btn-excel btn-sm"
+            >
+              {isExporting ? 'Exportando...' : '📥 Exportar Selecionados'}
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="btn btn-danger btn-sm"
+            >
+              🗑️ Excluir Selecionados
+            </button>
+          </div>
         </div>
       )}
 

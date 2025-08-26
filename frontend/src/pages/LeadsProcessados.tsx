@@ -60,6 +60,38 @@ const LeadsProcessados: React.FC = () => {
     }
   };
 
+  const handleExportSelected = async (selectedIds: string[]) => {
+    try {
+      setIsExporting(true);
+      // Filtrar apenas os leads selecionados
+      const selectedLeads = leads.filter(lead => selectedIds.includes(lead.id));
+      
+      // Criar dados para exportação
+      const exportData = {
+        filters: {
+          selectedIds: selectedIds
+        }
+      };
+      
+      const blob = await leadsAPI.exportSelectedLeads(exportData);
+      
+      // Criar link para download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `leads_selecionados_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      setError('Erro ao exportar leads selecionados. Tente novamente.');
+      console.error('Erro ao exportar selecionados:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Funções para edição e deleção
   const handleUpdateLead = async (id: string, updates: Partial<Lead>) => {
     try {
@@ -189,6 +221,7 @@ const LeadsProcessados: React.FC = () => {
             onDeleteLead={handleDeleteLead}
             onBulkDelete={handleBulkDelete}
             onExport={handleExport}
+            onExportSelected={handleExportSelected}
             isExporting={isExporting}
           />
         )}
