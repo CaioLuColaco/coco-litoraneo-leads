@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { leadsAPI } from '../services/api';
+import { leadsAPI, apiBaseUrl } from '../services/api';
 import { Lead } from '../types';
 import { EditableLeadTable } from '../components/EditableLeadTable';
+import SalesforceWebhook from '../components/SalesforceWebhook';
 
 const LeadsProcessados: React.FC = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -164,6 +165,9 @@ const LeadsProcessados: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Integração com Salesforce */}
+      <SalesforceWebhook baseUrl={apiBaseUrl} />
 
       {/* Mensagens de erro */}
       {error && (

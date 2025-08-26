@@ -323,6 +323,73 @@ router.get('/cnpj/:cnpj', async (req: Request, res: Response): Promise<void> => 
   }
 });
 
+// GET /api/leads/salesforce-webhook - Endpoint para Salesforce importar leads
+router.get('/salesforce-webhook', async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Buscar apenas leads processados
+    const leads = await prisma.lead.findMany({
+      where: { status: 'processado' },
+      orderBy: { createdAt: 'desc' },
+      take: 1000, // Limite para evitar sobrecarga
+    });
+
+    if (leads.length === 0) {
+      res.status(404).json({
+        success: false,
+        error: 'Nenhum lead processado encontrado',
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    // Formatar dados para Salesforce
+    const salesforceLeads = leads.map((lead: PrismaLead) => ({
+      Company: lead.companyName || '',
+      CNPJ__c: lead.cnpj || '',
+      City: lead.validatedCity || lead.city || '',
+      State: lead.validatedState || '',
+      PostalCode: lead.validatedZipCode || lead.zipCode || '',
+      Street: lead.validatedStreet || lead.streetAddress || '',
+      Neighborhood: lead.validatedNeighborhood || lead.neighborhood || '',
+      Lead_Score__c: lead.potentialScore || 0,
+      Lead_Quality__c: lead.potentialLevel || 'baixo',
+      Industry: lead.industry || lead.cnaeDescription || '',
+      CNAE__c: lead.cnae || '',
+      Annual_Revenue__c: lead.capitalSocial || 0,
+      Foundation_Date__c: lead.foundationDate ? lead.foundationDate.toISOString().split('T')[0] : '',
+      Address_Validated__c: lead.addressValidated || false,
+      Coordinates__c: lead.validatedCoordinates ? 'Sim' : 'Não',
+      Partners_Count__c: lead.partners && Array.isArray(lead.partners) ? lead.partners.length : 0,
+      Processing_Date__c: lead.updatedAt.toISOString().split('T')[0],
+      Notes__c: lead.userNotes || '',
+      Source__c: 'Coco Litorâneo - Processamento Automático',
+    }));
+
+    const response = {
+      success: true,
+      totalLeads: leads.length,
+      lastUpdate: new Date().toISOString(),
+      leads: salesforceLeads,
+      format: 'Salesforce Compatible',
+      instructions: 'Use este endpoint no Salesforce Data Import Wizard ou External Data Source',
+    };
+
+    // Headers para CORS e cache
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('X-Total-Count', leads.length.toString());
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('❌ Erro ao gerar webhook para Salesforce:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
 
 
 // GET /api/leads/:id - Busca lead por ID
