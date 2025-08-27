@@ -451,13 +451,13 @@ export class PotentialAnalysisService {
       const yearsInBusiness = now.getFullYear() - foundation.getFullYear();
 
       if (yearsInBusiness > 10) {
-        score += 18; // Aumentado de 15 para 18
+        score += 18;
         factors.push('Empresa estabelecida há mais de 10 anos');
       } else if (yearsInBusiness > 5) {
-        score += 15; // Aumentado de 10 para 15
+        score += 15;
         factors.push('Empresa estabelecida há 5-10 anos');
       } else if (yearsInBusiness > 2) {
-        score += 10; // Aumentado de 5 para 10
+        score += 10;
         factors.push('Empresa estabelecida há 2-5 anos');
       }
     } catch (error) {

@@ -232,7 +232,7 @@ Confiança = (Campos Disponíveis / Total de Campos) × 100
 2. **Segmento (25 pts)** - Tipo de negócio
 3. **Região (20 pts)** - Potencial de mercado
 4. **Capital Social (8 pts)** - Capacidade financeira
-5. **Data de Fundação (15 pts)** - Estabilidade
+5. **Data de Fundação (18 pts)** - Estabilidade
 
 ### **Pesos Fallback (Análise Básica):**
 1. **Nome da Empresa (25 pts)** - Análise por palavras-chave
