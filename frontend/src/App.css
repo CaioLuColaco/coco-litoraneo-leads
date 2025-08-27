@@ -399,24 +399,39 @@ code {
   font-family: monospace;
 }
 
+/* Endereço */
 .address {
-  font-size: 0.875rem;
+  max-width: 250px;
 }
 
-.address-street {
-  color: #111827;
+.street {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.street-number {
+  color: #6b7280;
   font-weight: 500;
 }
 
-.address-details {
+.neighborhood {
+  font-size: 0.875rem;
   color: #6b7280;
+  margin-bottom: 0.25rem;
 }
 
-.address-cep {
-  color: #6b7280;
+.city-state {
+  font-size: 0.875rem;
+  color: #374151;
+  margin-bottom: 0.25rem;
+}
+
+.zip-code {
   font-size: 0.75rem;
+  color: #9ca3af;
+  font-family: monospace;
 }
-
 
 
 .date {

@@ -25,6 +25,15 @@ export class AddressValidationService {
         throw new Error('CEP é obrigatório para validação');
       }
 
+      // Extrair número do endereço se não foi fornecido
+      if (!address.number && address.street) {
+        address.number = this.extractNumberFromAddress(address.street);
+        // Se encontrou número, limpar a rua
+        if (address.number) {
+          address.street = this.extractStreetFromAddress(address.street);
+        }
+      }
+
       // Verifica cache primeiro
       const cachedCep = await this.prisma.cepCache.findFirst({
         where: {
@@ -195,7 +204,61 @@ export class AddressValidationService {
     }
   }
 
+  /**
+   * Extrai número do endereço de um campo de endereço completo
+   */
+  private extractNumberFromAddress(addressField: string): string {
+    if (!addressField) return '';
+    
+    // Padrões comuns para números de endereço
+    const numberPatterns = [
+      /(\d+)/,                    // Qualquer número
+      /n[º°]?\s*(\d+)/i,         // Nº, N°, N, seguido de número
+      /número\s*(\d+)/i,          // "número" seguido de número
+      /(\d+)\s*-\s*[a-zA-Z]/,    // Número seguido de hífen e letra
+      /[a-zA-Z]\s*(\d+)/,        // Letra seguida de número
+    ];
+    
+    for (const pattern of numberPatterns) {
+      const match = addressField.match(pattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    
+    // Busca por números no final do endereço (padrão mais comum)
+    const endNumberMatch = addressField.match(/(\d+)\s*$/);
+    if (endNumberMatch) {
+      return endNumberMatch[1];
+    }
+    
+    // Busca por números no início do endereço
+    const startNumberMatch = addressField.match(/^(\d+)/);
+    if (startNumberMatch) {
+      return startNumberMatch[1];
+    }
+    
+    return '';
+  }
 
+  /**
+   * Extrai rua limpa (sem número) de um campo de endereço completo
+   */
+  private extractStreetFromAddress(addressField: string): string {
+    if (!addressField) return '';
+    
+    // Remove números e padrões comuns de endereço
+    let cleanStreet = addressField
+      .replace(/\d+/g, '')                    // Remove números
+      .replace(/n[º°]?\s*/gi, '')             // Remove Nº, N°, N
+      .replace(/número\s*/gi, '')             // Remove "número"
+      .replace(/,\s*$/g, '')                  // Remove vírgula no final
+      .replace(/^\s*,\s*/g, '')               // Remove vírgula no início
+      .replace(/\s+/g, ' ')                   // Normaliza espaços
+      .trim();
+    
+    return cleanStreet;
+  }
 
   /**
    * Constrói endereço a partir dos dados do CEP
@@ -203,7 +266,7 @@ export class AddressValidationService {
   private buildAddressFromCep(cepInfo: any, originalAddress: Partial<Address>, coordinates?: { latitude: number; longitude: number }): Address {
     return {
       street: cepInfo?.logradouro || originalAddress.street || '',
-      number: originalAddress.number || '',
+      number: originalAddress.number || '', // Número extraído do endereço original
       complement: originalAddress.complement || '',
       neighborhood: cepInfo?.bairro || originalAddress.neighborhood || '',
       city: cepInfo?.localidade || originalAddress.city || '',

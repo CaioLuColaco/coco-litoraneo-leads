@@ -66,6 +66,7 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
       city: lead.city,
       neighborhood: lead.neighborhood,
       streetAddress: lead.streetAddress,
+      number: lead.validatedNumber || '',
       zipCode: lead.zipCode,
     });
     setNotes(prev => ({ ...prev, [lead.id]: lead.userNotes || '' }));
@@ -75,6 +76,7 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
     try {
       await onUpdateLead(leadId, {
         ...editingData,
+        validatedNumber: editingData.number,
         userNotes: notes[leadId],
       });
       setEditingId(null);
@@ -551,7 +553,14 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
                           value={editingData.streetAddress || ''}
                           onChange={(e) => setEditingData(prev => ({ ...prev, streetAddress: e.target.value }))}
                           className="edit-input"
-                          placeholder="Endereço"
+                          placeholder="Rua"
+                        />
+                        <input
+                          type="text"
+                          value={editingData.number || ''}
+                          onChange={(e) => setEditingData(prev => ({ ...prev, number: e.target.value }))}
+                          className="edit-input"
+                          placeholder="Número"
                         />
                         <input
                           type="text"
@@ -579,6 +588,9 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
                       <>
                         <div className="street">
                           {lead.validatedStreet || lead.streetAddress}
+                          {lead.validatedNumber && (
+                            <span className="street-number">, {lead.validatedNumber}</span>
+                          )}
                         </div>
                         <div className="neighborhood">
                           {lead.validatedNeighborhood || lead.neighborhood}

@@ -39,6 +39,7 @@ export interface Lead {
   
   // Endereço original
   streetAddress: string;
+  number?: string;
   suggestedAddress?: string;
   zipCode: string;
   coordinates?: string;
