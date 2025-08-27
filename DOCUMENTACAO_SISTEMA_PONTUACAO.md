@@ -12,9 +12,9 @@ O sistema de pontuação de leads do **Coco Litorâneo** é um algoritmo intelig
 
 | **Pontuação** | **Classificação** | **Descrição** |
 |---------------|-------------------|---------------|
-| **0-39** | **Baixo** | Leads com potencial limitado |
-| **40-69** | **Médio** | Leads com potencial moderado |
-| **70-100** | **Alto** | Leads com alto potencial comercial |
+| **0-49** | **Baixo** | Leads com potencial limitado |
+| **50-79** | **Médio** | Leads com potencial moderado |
+| **80-100** | **Alto** | Leads com alto potencial comercial |
 
 ---
 
@@ -31,7 +31,7 @@ if (companyData.cnae || companyData.capitalSocial || companyData.marketSegment) 
 ```
 
 #### **Fatores Analisados (Prioritários):**
-1. **🏢 CNAE** (45-25 pontos) - **FATOR MAIS IMPORTANTE**
+1. **🏢 CNAE** (45-10 pontos) - **FATOR MAIS IMPORTANTE**
 2. **💰 Capital Social** (3-8 pontos)
 3. **🌍 Região** (10-20 pontos)
 4. **🏪 Segmento de Mercado** (15-25 pontos)
@@ -71,7 +71,7 @@ if (!companyData.cnae && !companyData.capitalSocial && !companyData.marketSegmen
 ## 📊 FATORES DE PONTUAÇÃO DETALHADOS
 
 ### **1. 🏢 CNAE (Classificação Nacional de Atividades Econômicas)**
-**Peso: 45 pontos (Alto) / 25 pontos (Médio)**
+**Peso: 45 pontos (Alto) / 10 pontos (Médio)**
 
 #### **CNAEs de Alto Potencial (45 pontos):**
 - **4721100**: Comércio varejista de produtos de padaria, laticínio, doces
@@ -84,7 +84,7 @@ if (!companyData.cnae && !companyData.capitalSocial && !companyData.marketSegmen
 - **1092900**: Fabricação de biscoitos e bolachas
 - **1093701**: Fabricação de chocolates e derivados do cacau
 
-#### **CNAEs Relacionados ao Setor (25 pontos):**
+#### **CNAEs Relacionados ao Setor (10 pontos):**
 - Códigos que começam com **47** (Comércio varejista)
 - Códigos que começam com **10** (Fabricação de produtos alimentícios)
 
@@ -263,19 +263,19 @@ Confiança = (Campos Disponíveis / Total de Campos) × 100
 
 ## 📈 INTERPRETAÇÃO DOS RESULTADOS
 
-### **Leads de Alto Potencial (70-100 pts):**
+### **Leads de Alto Potencial (80-100 pts):**
 - **Prioridade máxima** para contato
 - **Alta probabilidade** de conversão
 - **Segmento alinhado** com o produto
 - **Localização estratégica**
 
-### **Leads de Médio Potencial (40-69 pts):**
+### **Leads de Médio Potencial (50-79 pts):**
 - **Contato secundário** recomendado
 - **Potencial moderado** de conversão
 - **Possível qualificação** adicional
 - **Monitoramento contínuo**
 
-### **Leads de Baixo Potencial (0-39 pts):**
+### **Leads de Baixo Potencial (0-49 pts):**
 - **Baixa prioridade** de contato
 - **Segmento não alinhado**
 - **Possível exclusão** da base
@@ -339,7 +339,7 @@ Confiança = (Campos Disponíveis / Total de Campos) × 100
 ## 🎯 RECOMENDAÇÕES DE USO
 
 ### **Para Equipe Comercial:**
-1. **Foque em leads de alto potencial** (70-100 pts)
+1. **Foque em leads de alto potencial** (80-100 pts)
 2. **Use a confiança** para priorizar contatos
 3. **Analise os fatores** para estratégia de abordagem
 4. **Monitore leads médios** para oportunidades

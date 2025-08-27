@@ -172,9 +172,9 @@ export class PotentialAnalysisService {
 
     // Determina o nível de potencial
     let level: 'baixo' | 'médio' | 'alto';
-    if (score >= 70) {
+    if (score >= 80) {
       level = 'alto';
-    } else if (score >= 40) {
+    } else if (score >= 50) {
       level = 'médio';
     } else {
       level = 'baixo';
@@ -219,9 +219,9 @@ export class PotentialAnalysisService {
 
     // Determina o nível de potencial (com limites mais baixos para dados limitados)
     let level: 'baixo' | 'médio' | 'alto';
-    if (score >= 60) {
+    if (score >= 80) {
       level = 'alto';
-    } else if (score >= 35) {
+    } else if (score >= 50) {
       level = 'médio';
     } else {
       level = 'baixo';
@@ -284,9 +284,9 @@ export class PotentialAnalysisService {
 
     // Determina o nível de potencial
     let level: 'baixo' | 'médio' | 'alto';
-    if (score >= 70) {
+    if (score >= 80) {
       level = 'alto';
-    } else if (score >= 40) {
+    } else if (score >= 50) {
       level = 'médio';
     } else {
       level = 'baixo';
@@ -324,9 +324,9 @@ export class PotentialAnalysisService {
 
     // Determina o nível de potencial
     let level: 'baixo' | 'médio' | 'alto';
-    if (combinedScore >= 70) {
+    if (combinedScore >= 80) {
       level = 'alto';
-    } else if (combinedScore >= 40) {
+    } else if (combinedScore >= 50) {
       level = 'médio';
     } else {
       level = 'baixo';
@@ -375,7 +375,7 @@ export class PotentialAnalysisService {
       score += 45;        // CNAE de alto potencial = 45 pontos (peso aumentado)
       factors.push('CNAE de alto potencial (alimentação/varejo)');
     } else if (cnae.startsWith('47') || cnae.startsWith('10')) {
-      score += 25;        // CNAE relacionado ao setor = 25 pontos (peso aumentado)
+      score += 10;        // CNAE relacionado ao setor = 10 pontos (peso aumentado)
       factors.push('CNAE relacionado ao setor alimentício');
     }
 
@@ -657,9 +657,9 @@ export class PotentialAnalysisService {
     
     // Determinar nível final
     let level: 'baixo' | 'médio' | 'alto';
-    if (finalScore >= 70) {
+    if (finalScore >= 80) {
       level = 'alto';
-    } else if (finalScore >= 40) {
+    } else if (finalScore >= 50) {
       level = 'médio';
     } else {
       level = 'baixo';
@@ -945,9 +945,9 @@ export class PotentialAnalysisService {
     totalScore = Math.min(100, Math.max(0, totalScore));
 
     let level: 'baixo' | 'médio' | 'alto';
-    if (totalScore >= 70) {
+    if (totalScore >= 80) {
       level = 'alto';
-    } else if (totalScore >= 40) {
+    } else if (totalScore >= 50) {
       level = 'médio';
     } else {
       level = 'baixo';
