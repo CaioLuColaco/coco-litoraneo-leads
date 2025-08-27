@@ -538,7 +538,6 @@ code {
   border-collapse: collapse;
   background-color: white;
   border-radius: 0.5rem;
-  overflow: hidden;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
@@ -647,7 +646,63 @@ code {
 .potential-tooltip {
   position: relative;
   cursor: help;
+  overflow: visible;
 }
+
+.potential-tooltip-content {
+  position: fixed;
+  background-color: #1f2937;
+  color: white;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  white-space: pre-line;
+  z-index: 9999;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  min-width: 150px;
+  line-height: 1.4;
+  pointer-events: none;
+  animation: tooltipFadeIn 0.2s ease-in-out;
+}
+
+.tooltip-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 5px solid transparent;
+}
+
+.potential-tooltip-content[style*="bottom"] .tooltip-arrow {
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-color: #1f2937;
+}
+
+.potential-tooltip-content[style*="top"] .tooltip-arrow {
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-color: #1f2937;
+}
+
+.tooltip-body {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 
 .potential-tooltip:hover::after {
   content: attr(data-tooltip);
@@ -661,12 +716,13 @@ code {
   border-radius: 0.5rem;
   font-size: 0.75rem;
   white-space: pre-line; /* Mudança: permite quebras de linha */
-  z-index: 1000;
+  z-index: 9999; /* Aumentado para garantir que fique acima de tudo */
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   margin-bottom: 0.5rem;
   text-align: center; /* Centraliza o texto */
   min-width: 150px; /* Largura mínima para melhor legibilidade */
   line-height: 1.4; /* Espaçamento entre linhas */
+  pointer-events: none; /* Evita que o tooltip interfira com outros elementos */
 }
 
 .potential-tooltip:hover::before {
@@ -678,7 +734,8 @@ code {
   border: 5px solid transparent;
   border-top-color: #1f2937;
   margin-bottom: -5px;
-  z-index: 1000;
+  z-index: 9999; /* Aumentado para garantir que fique acima de tudo */
+  pointer-events: none; /* Evita que a seta interfira com outros elementos */
 }
 
 .btn-sm {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Lead, PotentialScoreDetails } from '../types';
+import { PotentialTooltip } from './PotentialTooltip';
 
 interface EditableLeadTableProps {
   leads: Lead[];
@@ -595,7 +596,7 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
 
                 {/* Potencial */}
                 <td>
-                  <div className="potential potential-tooltip" data-tooltip={generatePotentialTooltip(lead)}>
+                  <PotentialTooltip tooltipContent={generatePotentialTooltip(lead)}>
                     <div className="potential-container">
                       {/* Qualificação - Badge centralizado */}
                       <div className={`potential-level ${lead.potentialLevel}`}>
@@ -617,7 +618,7 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
                         </div>
                       )}
                     </div>
-                  </div>
+                  </PotentialTooltip>
                 </td>
 
                 {/* Observações */}
