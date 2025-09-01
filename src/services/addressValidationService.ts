@@ -250,8 +250,8 @@ export class AddressValidationService {
     // Remove números e padrões comuns de endereço
     let cleanStreet = addressField
       .replace(/\d+/g, '')                    // Remove números
-      .replace(/n[º°]?\s*/gi, '')             // Remove Nº, N°, N
-      .replace(/número\s*/gi, '')             // Remove "número"
+      .replace(/\bn[º°]?\s*\b/gi, '')         // Remove Nº, N°, N (apenas quando isolado)
+      .replace(/\bnúmero\s*\b/gi, '')         // Remove "número" (apenas quando isolado)
       .replace(/,\s*$/g, '')                  // Remove vírgula no final
       .replace(/^\s*,\s*/g, '')               // Remove vírgula no início
       .replace(/\s+/g, ' ')                   // Normaliza espaços

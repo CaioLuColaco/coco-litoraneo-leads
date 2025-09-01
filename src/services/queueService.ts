@@ -52,7 +52,10 @@ export class QueueService {
       },
       {
         connection: this.redis,
-        concurrency: 5, // Processa 5 leads simultaneamente
+        concurrency: 3, // Reduzido para 3 leads simultaneamente
+        lockDuration: 30000, // 30 segundos de lock
+        stalledInterval: 30000, // Verifica jobs travados a cada 30 segundos
+        maxStalledCount: 1, // Máximo 1 tentativa para jobs travados
       }
     );
 
@@ -324,6 +327,16 @@ export class QueueService {
    */
   private async updateJobStatus(jobId: string, status: string, error?: string): Promise<void> {
     try {
+      // Verificar se o job existe antes de atualizar
+      const existingJob = await this.prisma.processingJob.findUnique({
+        where: { id: jobId },
+      });
+
+      if (!existingJob) {
+        console.warn(`⚠️ Job ${jobId} não encontrado no banco de dados, ignorando atualização de status`);
+        return;
+      }
+
       await this.prisma.processingJob.update({
         where: { id: jobId },
         data: {
@@ -343,6 +356,16 @@ export class QueueService {
    */
   private async updateJobProgress(jobId: string, progress: number): Promise<void> {
     try {
+      // Verificar se o job existe antes de atualizar
+      const existingJob = await this.prisma.processingJob.findUnique({
+        where: { id: jobId },
+      });
+
+      if (!existingJob) {
+        console.warn(`⚠️ Job ${jobId} não encontrado no banco de dados, ignorando atualização de progresso`);
+        return;
+      }
+
       await this.prisma.processingJob.update({
         where: { id: jobId },
         data: {
@@ -389,7 +412,7 @@ export class QueueService {
   }
 
   /**
-   * Limpa filas antigas
+   * Limpa filas antigas e jobs travados
    */
   async cleanupOldJobs(): Promise<void> {
     try {
@@ -405,9 +428,97 @@ export class QueueService {
         },
       });
 
+      // Limpar jobs travados (processando há mais de 30 minutos)
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+      const stuckJobs = await this.prisma.processingJob.findMany({
+        where: {
+          status: 'processing',
+          startedAt: {
+            lt: thirtyMinutesAgo,
+          },
+        },
+      });
+
+      for (const job of stuckJobs) {
+        await this.prisma.processingJob.update({
+          where: { id: job.id },
+          data: {
+            status: 'failed',
+            error: 'Job travado - timeout de processamento',
+            completedAt: new Date(),
+          },
+        });
+      }
+
+      if (stuckJobs.length > 0) {
+        console.log(`🧹 ${stuckJobs.length} jobs travados limpos`);
+      }
+
+      // Sincronizar jobs órfãos
+      await this.syncOrphanJobs();
+
       console.log('🧹 Jobs antigos limpos com sucesso');
     } catch (error) {
       console.error('Erro ao limpar jobs antigos:', error);
+    }
+  }
+
+  /**
+   * Sincroniza jobs órfãos entre Redis e banco de dados
+   */
+  private async syncOrphanJobs(): Promise<void> {
+    try {
+      // Buscar todos os jobs ativos no Redis
+      const redisJobs = await this.leadProcessingQueue.getActive();
+      const redisJobIds = new Set(redisJobs.map(job => job.id));
+
+      // Buscar todos os jobs no banco de dados
+      const dbJobs = await this.prisma.processingJob.findMany({
+        where: {
+          status: {
+            in: ['pending', 'processing']
+          }
+        },
+        select: {
+          id: true,
+          redisJobId: true,
+        }
+      });
+
+      // Encontrar jobs que estão no Redis mas não no banco
+      const orphanRedisJobs = redisJobs.filter(redisJob => 
+        !dbJobs.some((dbJob: { id: string; redisJobId: string | null }) => dbJob.redisJobId === redisJob.id)
+      );
+
+      // Encontrar jobs que estão no banco mas não no Redis
+      const orphanDbJobs = dbJobs.filter((dbJob: { id: string; redisJobId: string | null }) => 
+        dbJob.redisJobId && !redisJobIds.has(dbJob.redisJobId)
+      );
+
+      // Remover jobs órfãos do Redis
+      for (const job of orphanRedisJobs) {
+        await job.remove();
+        console.log(`🧹 Job órfão ${job.id} removido do Redis`);
+      }
+
+      // Marcar jobs órfãos do banco como falhados
+      for (const job of orphanDbJobs) {
+        await this.prisma.processingJob.update({
+          where: { id: job.id },
+          data: {
+            status: 'failed',
+            error: 'Job órfão - não encontrado no Redis',
+            completedAt: new Date(),
+          },
+        });
+        console.log(`🧹 Job órfão ${job.id} marcado como falhado no banco`);
+      }
+
+      if (orphanRedisJobs.length > 0 || orphanDbJobs.length > 0) {
+        console.log(`🔄 Sincronização concluída: ${orphanRedisJobs.length} jobs órfãos do Redis removidos, ${orphanDbJobs.length} jobs órfãos do banco marcados como falhados`);
+      }
+    } catch (error) {
+      console.error('Erro ao sincronizar jobs órfãos:', error);
     }
   }
 
