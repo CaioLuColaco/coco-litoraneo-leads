@@ -703,27 +703,48 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const updates = req.body;
 
-    // Valida endereço se fornecido
-    if (updates.address) {
-      updates.address = await addressValidationService.validateAddress(
-        updates.address
+    const validUpdates: any = {};
+    
+    const validFields = [
+      'companyName', 'tradeName', 'matrixName', 'city', 'district', 'subdistrict', 'neighborhood',
+      'streetAddress', 'suggestedAddress', 'zipCode', 'coordinates', 'streetViewUrl',
+      'validatedStreet', 'validatedNumber', 'validatedComplement', 'validatedNeighborhood',
+      'validatedCity', 'validatedState', 'validatedZipCode', 'validatedCoordinates',
+      'phone', 'email', 'website', 'industry', 'estimatedEmployees', 'estimatedRevenue',
+      'products', 'cnae', 'cnaeDescription', 'capitalSocial', 'foundationDate', 'partners',
+      'addressValidated', 'addressValidationDate', 'addressValidationSource',
+      'facadeAnalyzed', 'facadeAnalysisDate', 'facadeAnalysis',
+      'potentialScore', 'potentialLevel', 'potentialFactors', 'potentialConfidence',
+      'status', 'processingError', 'userNotes'
+    ];
+
+    Object.keys(updates).forEach(key => {
+      if (validFields.includes(key)) {
+        validUpdates[key] = updates[key];
+      }
+    });
+
+    if (updates.number !== undefined) {
+      validUpdates.validatedNumber = updates.number;
+    }
+
+    if (validUpdates.address) {
+      validUpdates.address = await addressValidationService.validateAddress(
+        validUpdates.address
       );
     }
 
-    // Reanalisa potencial se dados da empresa foram alterados
-    if (updates.companyData) {
-      updates.potential =
+    if (validUpdates.companyData) {
+      validUpdates.potential =
         potentialAnalysisService.analyzePotentialByCompanyData(
-          updates.companyData
+          validUpdates.companyData
         );
     }
 
     const updatedLead = await prisma.lead.update({
       where: { id },
-      data: updates,
+      data: validUpdates,
     });
-
-          // Lead sempre será encontrado se chegou até aqui
 
     const response: ApiResponse<PrismaLead> = {
       success: true,

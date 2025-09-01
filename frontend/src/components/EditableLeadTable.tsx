@@ -74,9 +74,10 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
 
   const handleSave = async (leadId: string) => {
     try {
+      const { number, ...dataWithoutNumber } = editingData;
       await onUpdateLead(leadId, {
-        ...editingData,
-        validatedNumber: editingData.number,
+        ...dataWithoutNumber,
+        validatedNumber: number,
         userNotes: notes[leadId],
       });
       setEditingId(null);
