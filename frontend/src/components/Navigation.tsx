@@ -35,6 +35,13 @@ const Navigation: React.FC = () => {
           >
             ✅ Leads Processados
           </Link>
+          
+          <Link
+            to="/mapa"
+            className={`nav-link ${isActive('/mapa') ? 'active' : ''}`}
+          >
+            🗺️ Mapa
+          </Link>
         </div>
         
         <div className="nav-user">

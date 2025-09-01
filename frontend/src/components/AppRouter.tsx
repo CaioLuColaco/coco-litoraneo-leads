@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Navigation from './Navigation';
 import LeadsEnviados from '../pages/LeadsEnviados';
 import LeadsProcessados from '../pages/LeadsProcessados';
+import { LeadsMap } from '../pages/LeadsMap';
 import AuthForm from './AuthForm';
 
 const AppRouter: React.FC = () => {
@@ -31,6 +32,7 @@ const AppRouter: React.FC = () => {
                 <Route path="/" element={<Navigate to="/leads-enviados" replace />} />
                 <Route path="/leads-enviados" element={<LeadsEnviados />} />
                 <Route path="/leads-processados" element={<LeadsProcessados />} />
+                <Route path="/mapa" element={<LeadsMap />} />
                 <Route path="*" element={<Navigate to="/leads-enviados" replace />} />
               </Routes>
             </main>

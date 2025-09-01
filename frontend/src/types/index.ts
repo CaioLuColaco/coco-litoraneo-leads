@@ -53,7 +53,10 @@ export interface Lead {
   validatedCity?: string;
   validatedState?: string;
   validatedZipCode?: string;
-  validatedCoordinates?: any;
+  validatedCoordinates?: {
+    latitude: number;
+    longitude: number;
+  } | string | null;
   addressValidated?: boolean;
   addressValidationDate?: string;
   addressValidationSource?: string;
