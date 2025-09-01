@@ -107,10 +107,10 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
   // Função para obter cor do marcador baseado no potencial
   const getMarkerColor = (potentialLevel: string) => {
     switch (potentialLevel) {
-      case 'alto': return '#22c55e'; // Verde
-      case 'médio': return '#eab308'; // Amarelo
-      case 'baixo': return '#ef4444'; // Vermelho
-      default: return '#6b7280'; // Cinza
+      case 'alto': return '#16a34a'; // Verde mais escuro
+      case 'médio': return '#ca8a04'; // Amarelo mais escuro
+      case 'baixo': return '#dc2626'; // Vermelho mais escuro
+      default: return '#4b5563'; // Cinza mais escuro
     }
   };
 
@@ -216,17 +216,6 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
               <option value="baixo">Baixo</option>
             </select>
 
-            <select
-              value={filters.status}
-              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-              className="leads-map-select"
-            >
-              <option value="">Todos os status</option>
-              <option value="processado">Processado</option>
-              <option value="aguardando">Aguardando</option>
-              <option value="erro">Erro</option>
-            </select>
-
             <input
               type="text"
               placeholder="Filtrar por cidade..."
@@ -259,12 +248,12 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
               <CircleMarker
                 key={lead.id}
                 center={coordinates}
-                radius={8}
+                radius={12}
                 fillColor={getMarkerColor(lead.potentialLevel)}
                 color={getMarkerColor(lead.potentialLevel)}
-                weight={2}
-                opacity={0.8}
-                fillOpacity={0.6}
+                weight={3}
+                opacity={1}
+                fillOpacity={0.8}
               >
                 <Popup>
                   <div className="leads-map-popup">
@@ -274,6 +263,9 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                     </p>
                     <p className="leads-map-popup-text">
                       <strong>Endereço:</strong> {formatAddress(lead)}
+                    </p>
+                    <p className="leads-map-popup-text">
+                      <strong>CNAE: {lead.cnae} </strong> {lead.cnaeDescription}
                     </p>
                     <p className="leads-map-popup-text">
                       <strong>Potencial:</strong> 
@@ -304,15 +296,15 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
           <h4 className="leads-map-legend-title">Legenda</h4>
           <div className="leads-map-legend-items">
             <div className="leads-map-legend-item">
-              <div className="leads-map-legend-color" style={{ backgroundColor: '#22c55e' }}></div>
+              <div className="leads-map-legend-color" style={{ backgroundColor: '#16a34a' }}></div>
               <span className="leads-map-legend-text">Alto Potencial</span>
             </div>
             <div className="leads-map-legend-item">
-              <div className="leads-map-legend-color" style={{ backgroundColor: '#eab308' }}></div>
+              <div className="leads-map-legend-color" style={{ backgroundColor: '#ca8a04' }}></div>
               <span className="leads-map-legend-text">Médio Potencial</span>
             </div>
             <div className="leads-map-legend-item">
-              <div className="leads-map-legend-color" style={{ backgroundColor: '#ef4444' }}></div>
+              <div className="leads-map-legend-color" style={{ backgroundColor: '#dc2626' }}></div>
               <span className="leads-map-legend-text">Baixo Potencial</span>
             </div>
           </div>
