@@ -26,6 +26,7 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
     potentialLevel: '',
     status: '',
     city: '',
+    cnae: '',
   });
 
   // Buscar leads
@@ -47,6 +48,25 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
     fetchLeads();
   }, []);
 
+  // Obter CNAEs únicos dos leads
+  const uniqueCnaes = useMemo(() => {
+    const cnaeMap = new Map();
+    
+    leads.forEach(lead => {
+      if (lead.cnae && lead.cnaeDescription) {
+        const key = `${lead.cnae} - ${lead.cnaeDescription}`;
+        if (!cnaeMap.has(key)) {
+          cnaeMap.set(key, {
+            cnae: lead.cnae,
+            description: lead.cnaeDescription
+          });
+        }
+      }
+    });
+    
+    return Array.from(cnaeMap.values()).sort((a, b) => a.description.localeCompare(b.description));
+  }, [leads]);
+
   // Filtrar leads com coordenadas válidas
   const leadsWithCoordinates = useMemo(() => {
     const filtered = leads.filter(lead => {
@@ -60,8 +80,9 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
       const cityMatch = !filters.city || 
         (lead.validatedCity && lead.validatedCity.toLowerCase().includes(filters.city.toLowerCase())) ||
         (lead.city && lead.city.toLowerCase().includes(filters.city.toLowerCase()));
+      const cnaeMatch = !filters.cnae || lead.cnae === filters.cnae;
 
-      return hasCoordinates && potentialMatch && statusMatch && cityMatch;
+      return hasCoordinates && potentialMatch && statusMatch && cityMatch && cnaeMatch;
     });
     
     console.log('Leads com coordenadas:', filtered.length);
@@ -214,6 +235,19 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
               <option value="alto">Alto</option>
               <option value="médio">Médio</option>
               <option value="baixo">Baixo</option>
+            </select>
+
+            <select
+              value={filters.cnae}
+              onChange={(e) => setFilters(prev => ({ ...prev, cnae: e.target.value }))}
+              className="leads-map-select"
+            >
+              <option value="">Todos os CNAEs</option>
+              {uniqueCnaes.map((cnaeData) => (
+                <option key={cnaeData.cnae} value={cnaeData.cnae}>
+                  {cnaeData.cnae} - {cnaeData.description}
+                </option>
+              ))}
             </select>
 
             <input
