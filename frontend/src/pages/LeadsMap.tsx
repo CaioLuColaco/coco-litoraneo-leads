@@ -658,7 +658,25 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                 opacity={1}
                 fillOpacity={0.8}
                 eventHandlers={{
-                  click: () => addToRoute(lead)
+                  click: () => addToRoute(lead),
+                  mouseover: (e: any) => {
+                    e.target.openPopup();
+                  },
+                  mouseout: (e: any) => {
+                    // Aguardar um pouco antes de fechar para permitir mouseover no popup
+                    setTimeout(() => {
+                      const popup = e.target.getPopup();
+                      if (popup && popup.getElement()) {
+                        const popupElement = popup.getElement();
+                        // Verificar se o mouse ainda está sobre o popup ou marcador
+                        if (!popupElement.matches(':hover') && !e.target.getElement().matches(':hover')) {
+                          e.target.closePopup();
+                        }
+                      } else {
+                        e.target.closePopup();
+                      }
+                    }, 150);
+                  }
                 }}
               >
                 <Popup>

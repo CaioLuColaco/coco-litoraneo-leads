@@ -213,6 +213,24 @@
   background: white;
 }
 
+/* Manter popup visível ao passar mouse sobre ele */
+.leaflet-popup-content-wrapper:hover {
+  pointer-events: auto;
+}
+
+.leaflet-popup-content {
+  pointer-events: auto;
+}
+
+/* Garantir que o popup permaneça visível quando mouse está sobre ele */
+.leaflet-popup-content-wrapper {
+  pointer-events: auto;
+}
+
+.leaflet-popup-tip {
+  pointer-events: auto;
+}
+
 /* Estilos para o painel de rota */
 .leads-map-route-panel {
   position: absolute;
