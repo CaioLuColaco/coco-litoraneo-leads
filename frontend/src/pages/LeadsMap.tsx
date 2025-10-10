@@ -36,6 +36,8 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
   });
   const [routePoints, setRoutePoints] = useState<RoutePoint[]>([]);
   const [isRouteMode, setIsRouteMode] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizationProgress, setOptimizationProgress] = useState('');
 
   // Buscar leads
   useEffect(() => {
@@ -263,6 +265,169 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
     });
   };
 
+  // Função para calcular distância entre dois pontos (fórmula de Haversine)
+  const calculateDistance = (coord1: [number, number], coord2: [number, number]): number => {
+    const [lat1, lng1] = coord1;
+    const [lat2, lng2] = coord2;
+    
+    const R = 6371; // Raio da Terra em km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  // Função para calcular ganho de uma troca 2-Opt
+  const calculate2OptGain = (
+    route: RoutePoint[], 
+    i: number, 
+    j: number
+  ): number => {
+    const n = route.length;
+    
+    // Verificar limites e existência dos pontos
+    if (i < 0 || j >= n || i >= j - 1 || 
+        !route[i] || !route[i + 1] || !route[j] || !route[j + 1]) {
+      return 0;
+    }
+    
+    // Distância atual das arestas que serão removidas
+    const currentDistance = 
+      calculateDistance(route[i].coordinates, route[i + 1].coordinates) +
+      calculateDistance(route[j].coordinates, route[j + 1].coordinates);
+    
+    // Distância das novas arestas que serão adicionadas
+    const newDistance = 
+      calculateDistance(route[i].coordinates, route[j].coordinates) +
+      calculateDistance(route[i + 1].coordinates, route[j + 1].coordinates);
+    
+    return currentDistance - newDistance;
+  };
+
+  // Função para aplicar troca 2-Opt
+  const apply2OptSwap = (route: RoutePoint[], i: number, j: number): RoutePoint[] => {
+    const newRoute = [...route];
+    
+    // Verificar limites
+    if (i < 0 || j >= newRoute.length || i >= j - 1) {
+      return newRoute;
+    }
+    
+    // Troca 2-Opt: reverter o segmento entre i+1 e j
+    if (i + 1 < j) {
+      const segment = newRoute.slice(i + 1, j + 1);
+      segment.reverse();
+      newRoute.splice(i + 1, j - i, ...segment);
+    }
+    
+    return newRoute;
+  };
+
+  // Função para otimizar a rota usando algoritmo 2-Opt
+  const optimizeRoute = async () => {
+    if (routePoints.length < 3) return;
+    
+    setIsOptimizing(true);
+    setOptimizationProgress('Iniciando otimização...');
+    
+    // Simular delay para mostrar loading
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    let currentRoute = [...routePoints]
+      .sort((a, b) => a.order - b.order)
+      .filter(point => point && point.coordinates); // Filtrar pontos válidos
+    
+    // Verificar se temos pontos suficientes após filtragem
+    if (currentRoute.length < 3) {
+      setOptimizationProgress('Não há pontos suficientes para otimização');
+      setIsOptimizing(false);
+      return;
+    }
+    
+    let improved = true;
+    let iterations = 0;
+    const maxIterations = 50; // Limite para evitar loops infinitos
+    
+    console.log('Rota inicial:', currentRoute.map(p => p.lead.companyName));
+    console.log('Coordenadas:', currentRoute.map(p => p.coordinates));
+    
+    // Algoritmo 2-Opt
+    while (improved && iterations < maxIterations) {
+      improved = false;
+      iterations++;
+      
+      setOptimizationProgress(`Iteração ${iterations} - Analisando melhorias...`);
+      
+      let bestGain = 0;
+      let bestI = -1;
+      let bestJ = -1;
+      
+      // Tentar todas as possíveis trocas 2-Opt
+      for (let i = 0; i < currentRoute.length - 1; i++) {
+        for (let j = i + 2; j < currentRoute.length; j++) {
+          // Verificar se os pontos existem antes de calcular o ganho
+          if (currentRoute[i] && currentRoute[i + 1] && 
+              currentRoute[j] && currentRoute[j + 1]) {
+            const gain = calculate2OptGain(currentRoute, i, j);
+            
+            if (gain > bestGain) {
+              bestGain = gain;
+              bestI = i;
+              bestJ = j;
+            }
+          }
+        }
+      }
+      
+      console.log(`Iteração ${iterations}: Melhor ganho encontrado: ${bestGain.toFixed(3)} km`);
+      
+      // Aplicar a melhor troca encontrada
+      if (bestGain > 0.001) {
+        console.log(`Aplicando troca: ${bestI} -> ${bestJ}`);
+        currentRoute = apply2OptSwap(currentRoute, bestI, bestJ);
+        improved = true;
+        setOptimizationProgress(`Iteração ${iterations} - Melhoria encontrada! Ganho: ${bestGain.toFixed(2)} km`);
+        
+        console.log('Nova rota:', currentRoute.map(p => p.lead.companyName));
+        
+        // Pequeno delay para mostrar progresso
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+    
+    if (iterations >= maxIterations) {
+      setOptimizationProgress('Limite de iterações atingido');
+    } else {
+      setOptimizationProgress(`Otimização concluída em ${iterations} iterações`);
+    }
+    
+    // Atualizar a ordem dos pontos
+    const optimizedPoints = currentRoute.map((point, index) => ({
+      ...point,
+      order: index + 1
+    }));
+    
+    setRoutePoints(optimizedPoints);
+    setIsOptimizing(false);
+  };
+
+  // Calcular distância total da rota
+  const totalDistance = useMemo(() => {
+    if (routePoints.length < 2) return 0;
+    
+    const sortedPoints = routePoints.sort((a, b) => a.order - b.order);
+    let total = 0;
+    
+    for (let i = 0; i < sortedPoints.length - 1; i++) {
+      total += calculateDistance(sortedPoints[i].coordinates, sortedPoints[i + 1].coordinates);
+    }
+    
+    return total;
+  }, [routePoints]);
+
   // Obter coordenadas da rota para o Polyline
   const routeCoordinates = useMemo(() => {
     return routePoints
@@ -348,20 +513,46 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
         {isRouteMode && (
           <div className="leads-map-route-panel">
             <div className="leads-map-route-panel-header">
-              <h3 className="leads-map-route-panel-title">Rota ({routePoints.length})</h3>
-              {routePoints.length > 0 && (
-                <button
-                  onClick={clearRoute}
-                  className="leads-map-route-clear-button"
-                  title="Limpar rota"
-                >
-                  ✕
-                </button>
-              )}
+              <div>
+                <h3 className="leads-map-route-panel-title">Rota ({routePoints.length})</h3>
+                {routePoints.length >= 2 && (
+                  <p className="leads-map-route-panel-distance">
+                    Distância total: {totalDistance.toFixed(1)} km
+                  </p>
+                )}
+              </div>
+              <div className="leads-map-route-panel-actions">
+                {routePoints.length >= 3 && (
+                  <button
+                    onClick={optimizeRoute}
+                    disabled={isOptimizing}
+                    className="leads-map-route-optimize-button"
+                    title="Otimizar rota"
+                  >
+                    {isOptimizing ? '⏳' : 'Calcular rota'}
+                  </button>
+                )}
+                {routePoints.length > 0 && (
+                  <button
+                    onClick={clearRoute}
+                    className="leads-map-route-clear-button"
+                    title="Limpar rota"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
             
             <div className="leads-map-route-panel-content">
-              {routePoints.length === 0 ? (
+              {isOptimizing ? (
+                <div className="leads-map-route-optimizing">
+                  <div className="leads-map-route-optimizing-spinner"></div>
+                  <p className="leads-map-route-optimizing-text">
+                    {optimizationProgress || 'Calculando melhor rota...'}
+                  </p>
+                </div>
+              ) : routePoints.length === 0 ? (
                 <p className="leads-map-route-empty">
                   Clique nos pontos do mapa para adicionar à rota
                 </p>
@@ -369,8 +560,22 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                 <div className="leads-map-route-list">
                   {routePoints
                     .sort((a, b) => a.order - b.order)
-                    .map((point, index) => (
-                      <div key={point.lead.id} className="leads-map-route-item">
+                    .map((point, index) => {
+                      const isStart = index === 0;
+                      const isEnd = index === (routePoints.length - 1);
+                      const itemClass = isStart
+                        ? 'leads-map-route-item leads-map-route-item-start'
+                        : isEnd
+                          ? 'leads-map-route-item leads-map-route-item-end'
+                          : 'leads-map-route-item';
+                      return (
+                      <div key={point.lead.id} className={itemClass}>
+                        {(isStart || isEnd) && (
+                          <div className={`leads-map-route-fixed-tag ${isStart ? 'start' : 'end'}`}>
+                            <span className="leads-map-route-fixed-pin">📌</span>
+                            <span className="leads-map-route-fixed-text">{isStart ? 'Início' : 'Destino'}</span>
+                          </div>
+                        )}
                         <div className="leads-map-route-item-number">
                           {point.order}
                         </div>
@@ -382,33 +587,35 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                             {formatAddress(point.lead)}
                           </div>
                         </div>
-                        <div className="leads-map-route-item-actions">
-                          <button
-                            onClick={() => movePointUp(index)}
-                            disabled={index === 0}
-                            className="leads-map-route-action-button"
-                            title="Mover para cima"
-                          >
-                            ↑
-                          </button>
-                          <button
-                            onClick={() => movePointDown(index)}
-                            disabled={index === routePoints.length - 1}
-                            className="leads-map-route-action-button"
-                            title="Mover para baixo"
-                          >
-                            ↓
-                          </button>
-                          <button
-                            onClick={() => removeFromRoute(point.lead.id)}
-                            className="leads-map-route-action-button"
-                            title="Remover da rota"
-                          >
-                            ✕
-                          </button>
-                        </div>
+                         {(!isStart && !isEnd) && (
+                          <div className="leads-map-route-item-actions">
+                            <button
+                              onClick={() => movePointUp(index)}
+                              disabled={index === 0}
+                              className="leads-map-route-action-button"
+                              title="Mover para cima"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              onClick={() => movePointDown(index)}
+                              disabled={index === routePoints.length - 1}
+                              className="leads-map-route-action-button"
+                              title="Mover para baixo"
+                            >
+                              ↓
+                            </button>
+                            <button
+                              onClick={() => removeFromRoute(point.lead.id)}
+                              className="leads-map-route-action-button"
+                              title="Remover da rota"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    ))}
+                    );})}
                 </div>
               )}
             </div>
