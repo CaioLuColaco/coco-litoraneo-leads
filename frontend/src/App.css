@@ -1273,3 +1273,84 @@ code {
   transform: scale(1.05);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
+
+/* Estilos para a coluna Data de Fundação */
+.foundation-date {
+  padding: 0.75rem;
+  vertical-align: top;
+}
+
+.foundation-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+}
+
+.foundation-date-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #2c3e50;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 0.375rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.foundation-date-value:hover {
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  transform: scale(1.02);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.foundation-date-value::before {
+  content: '📅';
+  margin-right: 0.375rem;
+  font-size: 0.75rem;
+  display: inline; /* força ficar na linha */
+}
+
+.foundation-years {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6c757d;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.foundation-years:hover {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  color: #495057;
+  transform: scale(1.05);
+}
+
+.foundation-years::before {
+  content: '⏱️';
+  margin-right: 0.25rem;
+  font-size: 0.65rem;
+}
+
+/* Responsividade para a coluna de fundação */
+@media (max-width: 768px) {
+  .foundation-info {
+    gap: 0.125rem;
+  }
+  
+  .foundation-date-value {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .foundation-years {
+    font-size: 0.65rem;
+    padding: 0.125rem 0.375rem;
+  }
+}

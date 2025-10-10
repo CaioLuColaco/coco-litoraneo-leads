@@ -49,20 +49,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (data: LoginData) => {
     try {
-      console.log('🔐 Tentando fazer login com:', data.email);
       const response = await authAPI.login(data);
       
-      console.log('📡 Resposta da API:', response);
-      
       const { token, user: userData } = response;
-      
-      console.log('✅ Login bem-sucedido:', userData);
       
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(userData));
       
       setUser(userData);
-      console.log('👤 Usuário definido no estado:', userData);
     } catch (error) {
       console.error('❌ Erro no login:', error);
       throw error;

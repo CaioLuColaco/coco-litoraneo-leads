@@ -219,3 +219,66 @@ export interface AuthMiddleware {
   userId: string;
   userEmail: string;
 }
+
+// Interfaces para sistema de pontuação configurável
+export interface ScoringConfig {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  categories: ScoringCategory[];
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+}
+
+export interface ScoringCategory {
+  id: string;
+  configId: string;
+  name: string;
+  type: 'cnae' | 'region' | 'capital' | 'foundation' | 'address' | 'partners' | 'custom';
+  points: number;
+  description?: string;
+  criteria: ScoringCriteria[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScoringCriteria {
+  id: string;
+  categoryId: string;
+  name: string;
+  value: string;
+  points: number;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateScoringConfigRequest {
+  name: string;
+  description?: string;
+  categories: CreateScoringCategoryRequest[];
+}
+
+export interface CreateScoringCategoryRequest {
+  name: string;
+  type: 'cnae' | 'region' | 'capital' | 'foundation' | 'address' | 'partners' | 'custom';
+  points: number;
+  description?: string;
+  criteria: CreateScoringCriteriaRequest[];
+}
+
+export interface CreateScoringCriteriaRequest {
+  name: string;
+  value: string;
+  points: number;
+  description?: string;
+}
+
+export interface UpdateScoringConfigRequest {
+  name?: string;
+  description?: string;
+  isActive?: boolean;
+  categories?: CreateScoringCategoryRequest[];
+}

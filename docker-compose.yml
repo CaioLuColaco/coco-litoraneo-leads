@@ -12,7 +12,7 @@ services:
       MYSQL_USER: coco_user
       MYSQL_PASSWORD: coco_password_2024
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql/init:/docker-entrypoint-initdb.d

@@ -8,6 +8,7 @@ import { notFoundHandler } from './middleware/notFoundHandler';
 import { leadsRoutes, initializeServices } from './routes/leadsRoutes';
 import { healthRoutes } from './routes/healthRoutes';
 import { authRoutes } from './routes/authRoutes';
+import { scoringRoutes } from './routes/scoringRoutes';
 import { QueueService } from './services/queueService';
 import { ExcelProcessingService } from './services/excelProcessingService';
 import { AddressValidationService } from './services/addressValidationService';
@@ -50,6 +51,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/leads', leadsRoutes);
+app.use('/api/scoring', scoringRoutes);
 
 // Middleware de tratamento de erros
 app.use(notFoundHandler);

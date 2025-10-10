@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { User, LoginRequest, RegisterRequest, AuthResponse } from '../types/lead';
+import { prisma } from '../config/database';
 
 export class AuthService {
   private readonly jwtSecret: string;
@@ -11,7 +12,7 @@ export class AuthService {
   constructor() {
     this.jwtSecret = process.env.JWT_SECRET || 'coco-litoraneo-secret-key-2024';
     this.jwtExpiresIn = process.env.JWT_EXPIRES_IN || '7d';
-    this.prisma = new PrismaClient();
+    this.prisma = prisma;
   }
 
   /**

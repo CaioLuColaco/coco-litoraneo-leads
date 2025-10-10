@@ -79,7 +79,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
     const leads = await prisma.lead.findMany({
       where,
-      take: filters.limit || 100,
+      take: filters.limit || 1000,
       skip: filters.offset || 0,
       orderBy: { createdAt: 'desc' },
     });

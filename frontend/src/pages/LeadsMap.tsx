@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, Popup, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Popup, CircleMarker, Polyline } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import { Lead } from '../types';
 import { leadsAPI } from '../services/api';
@@ -18,6 +18,12 @@ Icon.Default.mergeOptions({
 
 interface LeadsMapProps {}
 
+interface RoutePoint {
+  lead: Lead;
+  coordinates: [number, number];
+  order: number;
+}
+
 export const LeadsMap: React.FC<LeadsMapProps> = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +34,8 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
     city: '',
     cnae: '',
   });
+  const [routePoints, setRoutePoints] = useState<RoutePoint[]>([]);
+  const [isRouteMode, setIsRouteMode] = useState(false);
 
   // Buscar leads
   useEffect(() => {
@@ -35,7 +43,6 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
       try {
         setLoading(true);
         const data = await leadsAPI.getAllLeads();
-        console.log('Leads carregados:', data.length);
         setLeads(data);
       } catch (err) {
         setError('Erro ao carregar leads');
@@ -85,7 +92,6 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
       return hasCoordinates && potentialMatch && statusMatch && cityMatch && cnaeMatch;
     });
     
-    console.log('Leads com coordenadas:', filtered.length);
     return filtered;
   }, [leads, filters]);
 
@@ -196,6 +202,74 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
     }
   };
 
+  // Funções para gerenciar a rota
+  const toggleRouteMode = () => {
+    setIsRouteMode(!isRouteMode);
+    if (isRouteMode) {
+      setRoutePoints([]);
+    }
+  };
+
+  const addToRoute = (lead: Lead) => {
+    if (!isRouteMode) return;
+    
+    const coordinates = getLeadCoordinates(lead);
+    if (!coordinates) return;
+
+    const isAlreadyInRoute = routePoints.some(point => point.lead.id === lead.id);
+    if (isAlreadyInRoute) return;
+
+    const newPoint: RoutePoint = {
+      lead,
+      coordinates,
+      order: routePoints.length + 1
+    };
+
+    setRoutePoints(prev => [...prev, newPoint]);
+  };
+
+  const removeFromRoute = (leadId: string) => {
+    setRoutePoints(prev => {
+      const filtered = prev.filter(point => point.lead.id !== leadId);
+      // Reordenar os pontos restantes
+      return filtered.map((point, index) => ({
+        ...point,
+        order: index + 1
+      }));
+    });
+  };
+
+  const clearRoute = () => {
+    setRoutePoints([]);
+  };
+
+  const movePointUp = (index: number) => {
+    if (index === 0) return;
+    
+    setRoutePoints(prev => {
+      const newPoints = [...prev];
+      [newPoints[index - 1], newPoints[index]] = [newPoints[index], newPoints[index - 1]];
+      return newPoints.map((point, i) => ({ ...point, order: i + 1 }));
+    });
+  };
+
+  const movePointDown = (index: number) => {
+    if (index === routePoints.length - 1) return;
+    
+    setRoutePoints(prev => {
+      const newPoints = [...prev];
+      [newPoints[index], newPoints[index + 1]] = [newPoints[index + 1], newPoints[index]];
+      return newPoints.map((point, i) => ({ ...point, order: i + 1 }));
+    });
+  };
+
+  // Obter coordenadas da rota para o Polyline
+  const routeCoordinates = useMemo(() => {
+    return routePoints
+      .sort((a, b) => a.order - b.order)
+      .map(point => point.coordinates);
+  }, [routePoints]);
+
   if (loading) {
     return (
       <div className="leads-map-loading">
@@ -226,6 +300,13 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
           
           {/* Filtros */}
           <div className="leads-map-filters">
+            <button
+              onClick={toggleRouteMode}
+              className={`leads-map-route-button ${isRouteMode ? 'active' : ''}`}
+            >
+              {isRouteMode ? 'Sair do Modo Rota' : 'Modo Rota'}
+            </button>
+
             <select
               value={filters.potentialLevel}
               onChange={(e) => setFilters(prev => ({ ...prev, potentialLevel: e.target.value }))}
@@ -263,6 +344,77 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
 
       {/* Mapa */}
       <div className="leads-map-map-container">
+        {/* Lista de Rota Flutuante */}
+        {isRouteMode && (
+          <div className="leads-map-route-panel">
+            <div className="leads-map-route-panel-header">
+              <h3 className="leads-map-route-panel-title">Rota ({routePoints.length})</h3>
+              {routePoints.length > 0 && (
+                <button
+                  onClick={clearRoute}
+                  className="leads-map-route-clear-button"
+                  title="Limpar rota"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            
+            <div className="leads-map-route-panel-content">
+              {routePoints.length === 0 ? (
+                <p className="leads-map-route-empty">
+                  Clique nos pontos do mapa para adicionar à rota
+                </p>
+              ) : (
+                <div className="leads-map-route-list">
+                  {routePoints
+                    .sort((a, b) => a.order - b.order)
+                    .map((point, index) => (
+                      <div key={point.lead.id} className="leads-map-route-item">
+                        <div className="leads-map-route-item-number">
+                          {point.order}
+                        </div>
+                        <div className="leads-map-route-item-content">
+                          <div className="leads-map-route-item-name">
+                            {point.lead.companyName}
+                          </div>
+                          <div className="leads-map-route-item-address">
+                            {formatAddress(point.lead)}
+                          </div>
+                        </div>
+                        <div className="leads-map-route-item-actions">
+                          <button
+                            onClick={() => movePointUp(index)}
+                            disabled={index === 0}
+                            className="leads-map-route-action-button"
+                            title="Mover para cima"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            onClick={() => movePointDown(index)}
+                            disabled={index === routePoints.length - 1}
+                            className="leads-map-route-action-button"
+                            title="Mover para baixo"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            onClick={() => removeFromRoute(point.lead.id)}
+                            className="leads-map-route-action-button"
+                            title="Remover da rota"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <MapContainer
           center={mapCenter as [number, number]}
           zoom={10}
@@ -274,24 +426,46 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
 
+          {/* Desenhar rota */}
+          {routeCoordinates.length > 1 && (
+            <Polyline
+              positions={routeCoordinates}
+            />
+          )}
+
           {leadsWithCoordinates.map((lead) => {
             const coordinates = getLeadCoordinates(lead);
             if (!coordinates) return null;
+
+            const isInRoute = routePoints.some(point => point.lead.id === lead.id);
+            const routeOrder = routePoints.find(point => point.lead.id === lead.id)?.order;
 
             return (
               <CircleMarker
                 key={lead.id}
                 center={coordinates}
-                radius={12}
-                fillColor={getMarkerColor(lead.potentialLevel)}
-                color={getMarkerColor(lead.potentialLevel)}
-                weight={3}
+                radius={isInRoute ? 16 : 12}
+                fillColor={isInRoute ? '#3b82f6' : getMarkerColor(lead.potentialLevel)}
+                color={isInRoute ? '#1d4ed8' : getMarkerColor(lead.potentialLevel)}
+                weight={isInRoute ? 4 : 3}
                 opacity={1}
                 fillOpacity={0.8}
+                eventHandlers={{
+                  click: () => addToRoute(lead)
+                }}
               >
                 <Popup>
                   <div className="leads-map-popup">
                     <h3 className="leads-map-popup-title">{lead.companyName}</h3>
+                    
+                    {isInRoute && (
+                      <div className="leads-map-popup-route-info">
+                        <span className="leads-map-popup-route-badge">
+                          Ponto {routeOrder} da Rota
+                        </span>
+                      </div>
+                    )}
+                    
                     <p className="leads-map-popup-text">
                       <strong>CNPJ:</strong> {lead.cnpj}
                     </p>
@@ -317,6 +491,26 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                       <p className="leads-map-popup-text">
                         <strong>Capital:</strong> R$ {lead.capitalSocial.toLocaleString('pt-BR')}
                       </p>
+                    )}
+                    
+                    {isRouteMode && (
+                      <div className="leads-map-popup-actions">
+                        {isInRoute ? (
+                          <button
+                            onClick={() => removeFromRoute(lead.id)}
+                            className="leads-map-popup-button leads-map-popup-button-remove"
+                          >
+                            Remover da Rota
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => addToRoute(lead)}
+                            className="leads-map-popup-button leads-map-popup-button-add"
+                          >
+                            Adicionar à Rota
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </Popup>

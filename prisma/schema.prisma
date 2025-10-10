@@ -169,3 +169,60 @@ model ProcessingLog {
   
   @@map("processing_logs")
 }
+
+// Modelo para configurações de pontuação
+model ScoringConfig {
+  id          String   @id @default(cuid())
+  name        String   // Nome da configuração (ex: "Configuração Padrão")
+  description String?  // Descrição opcional
+  isActive    Boolean  @default(true) // Se é a configuração ativa
+  
+  // Categorias de pontuação
+  categories  ScoringCategory[]
+  
+  // Metadados
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?  // ID do usuário que criou
+  
+  @@map("scoring_configs")
+}
+
+// Modelo para categorias de pontuação
+model ScoringCategory {
+  id          String   @id @default(cuid())
+  configId    String
+  config      ScoringConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  
+  name        String   // Nome da categoria (ex: "CNAEs de Alto Potencial")
+  type        String   // Tipo da categoria (cnae, region, capital, foundation, etc.)
+  points      Int      // Pontos base para esta categoria
+  description String?  // Descrição da categoria
+  
+  // Critérios específicos da categoria
+  criteria    ScoringCriteria[]
+  
+  // Metadados
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("scoring_categories")
+}
+
+// Modelo para critérios específicos de cada categoria
+model ScoringCriteria {
+  id          String   @id @default(cuid())
+  categoryId  String
+  category    ScoringCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  name        String   // Nome do critério (ex: "4721100 - Padaria")
+  value       String   // Valor do critério (ex: "4721100" para CNAE)
+  points      Int      // Pontos específicos para este critério
+  description String?  // Descrição do critério
+  
+  // Metadados
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("scoring_criteria")
+}

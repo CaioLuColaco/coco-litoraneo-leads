@@ -212,9 +212,10 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
    */
   const generatePotentialTooltip = (lead: Lead): string => {
     if (lead.potentialFactors && Array.isArray(lead.potentialFactors)) {
+      // Verifica se os fatores são strings (formato atual) ou objetos
       const factors = lead.potentialFactors
-        .filter((factor: any) => factor && factor.factor && factor.points !== undefined)
-        .map((factor: any) => `${factor.factor}: ${factor.points} pts`);
+        .filter((factor: any) => factor && typeof factor === 'string')
+        .map((factor: string) => factor);
       
       if (factors.length > 0) {
         let tooltip = factors.join('\n');
@@ -421,6 +422,17 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
                   </span>
                 )}
               </th>
+              <th 
+                className="sortable-header"
+                onClick={() => handleSort('foundationDate')}
+              >
+                Data de Fundação
+                {sortField === 'foundationDate' && (
+                  <span className="sort-indicator">
+                    {sortDirection === 'asc' ? ' ↑' : ' ↓'}
+                  </span>
+                )}
+              </th>
               <th>Sócios</th>
               <th 
                 className="sortable-header"
@@ -509,6 +521,27 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
                   {lead.capitalSocial ? (
                     <div className="capital-value">
                       R$ {lead.capitalSocial.toLocaleString('pt-BR')}
+                    </div>
+                  ) : (
+                    <span className="no-data">Não informado</span>
+                  )}
+                </td>
+
+                {/* Data de Fundação */}
+                <td className="foundation-date">
+                  {lead.foundationDate ? (
+                    <div className="foundation-info">
+                      <div className="foundation-date-value">
+                        {new Date(lead.foundationDate).toLocaleDateString('pt-BR')}
+                      </div>
+                      <div className="foundation-years">
+                        {(() => {
+                          const foundation = new Date(lead.foundationDate);
+                          const now = new Date();
+                          const years = now.getFullYear() - foundation.getFullYear();
+                          return `${years} ${years === 1 ? 'ano' : 'anos'}`;
+                        })()}
+                      </div>
                     </div>
                   ) : (
                     <span className="no-data">Não informado</span>
@@ -609,29 +642,46 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
 
                 {/* Potencial */}
                 <td>
-                  <PotentialTooltip tooltipContent={generatePotentialTooltip(lead)}>
-                    <div className="potential-container">
-                      {/* Qualificação - Badge centralizado */}
-                      <div className={`potential-level ${lead.potentialLevel}`}>
-                        {lead.potentialLevel === 'alto' && '🟢'}
-                        {lead.potentialLevel === 'médio' && '🟡'}
-                        {lead.potentialLevel === 'baixo' && '🔴'}
-                        <span className="level-text">{lead.potentialLevel.toUpperCase()}</span>
-                      </div>
-                      
-                      {/* Pontuação - Número centralizado */}
-                      <div className="potential-score">
-                        {lead.potentialScore}
-                      </div>
-                      
-                      {/* Confiança - Porcentagem centralizada */}
-                      {lead.potentialConfidence && (
-                        <div className="potential-confidence">
-                          {lead.potentialConfidence}% confiança
+                  {editingId === lead.id ? (
+                    <input
+                      type="text"
+                      value={editingData.potentialScore || ''}
+                      onChange={(e) => setEditingData(prev => ({ ...prev, potentialScore: parseInt(e.target.value) || 0 }))}
+                      className="edit-input"
+                    />
+                  ) : (
+                    <div className="potential-info">
+                      {lead.potentialScore === 0 && lead.potentialLevel === 'baixo' && lead.potentialFactors?.includes('Nenhuma configuração de pontuação ativa') ? (
+                        <div className="no-config-message">
+                          <span className="no-config-text">Nenhuma configuração de pontuação cadastrada</span>
                         </div>
+                      ) : (
+                        <PotentialTooltip tooltipContent={generatePotentialTooltip(lead)}>
+                          <div className="potential-container">
+                            {/* Qualificação - Badge centralizado */}
+                            <div className={`potential-level ${lead.potentialLevel}`}>
+                              {lead.potentialLevel === 'alto' && '🟢'}
+                              {lead.potentialLevel === 'médio' && '🟡'}
+                              {lead.potentialLevel === 'baixo' && '🔴'}
+                              <span className="level-text">{lead.potentialLevel.toUpperCase()}</span>
+                            </div>
+                            
+                            {/* Pontuação - Número centralizado */}
+                            <div className="potential-score">
+                              {lead.potentialScore}
+                            </div>
+                            
+                            {/* Confiança - Porcentagem centralizada */}
+                            {lead.potentialConfidence && (
+                              <div className="potential-confidence">
+                                {lead.potentialConfidence}% confiança
+                              </div>
+                            )}
+                          </div>
+                        </PotentialTooltip>
                       )}
                     </div>
-                  </PotentialTooltip>
+                  )}
                 </td>
 
                 {/* Observações */}
@@ -701,3 +751,71 @@ export const EditableLeadTable: React.FC<EditableLeadTableProps> = ({
     </div>
   );
 };
+
+// Estilos CSS inline
+const styles = `
+  .no-config-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  .no-config-text {
+    color: #6c757d;
+    font-size: 12px;
+    font-weight: 500;
+    font-style: italic;
+  }
+
+  .potential-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .potential-score {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .badge-success {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+  }
+
+  .badge-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+  }
+
+  .badge-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+  }
+`;
+
+// Injetar estilos no head do documento
+if (typeof document !== 'undefined') {
+  const styleElement = document.createElement('style');
+  styleElement.textContent = styles;
+  document.head.appendChild(styleElement);
+}
