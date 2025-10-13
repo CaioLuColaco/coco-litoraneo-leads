@@ -107,7 +107,8 @@ model Lead {
   // Relacionamentos
   userId    String?
   user      User?   @relation(fields: [userId], references: [id])
-  
+
+  routeVisits RouteVisit[]
   // Jobs de processamento
   processingJobs ProcessingJob[] @relation("LeadProcessingJobs")
 
@@ -225,4 +226,47 @@ model ScoringCriteria {
   updatedAt   DateTime @updatedAt
   
   @@map("scoring_criteria")
+}
+
+model Seller {
+  id        String   @id @default(cuid())
+  name      String
+  birthDate DateTime
+  phone     String
+  email     String   @unique
+  address   String
+  city      String
+  state     String
+  zipCode   String
+  responsibleRegion String
+  routes Routes[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sellers")
+}
+
+model Routes {
+  id        String   @id @default(cuid())
+  sellerId  String
+  seller    Seller @relation(fields: [sellerId], references: [id])
+  routeVisits RouteVisit[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("routes")
+}
+
+model RouteVisit {
+  id        String   @id @default(cuid())
+  routeId   String
+  route     Routes @relation(fields: [routeId], references: [id])
+  leadId    String
+  lead      Lead @relation(fields: [leadId], references: [id])
+  visitDate DateTime
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("route_visits")
 }
