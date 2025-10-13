@@ -433,55 +433,137 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
     return [...segment1, ...segment3, ...segment2, ...segment4];
   };
 
-  // Função para otimizar a rota usando algoritmo 3-Opt
-  const optimizeRoute = async () => {
-    if (routePoints.length < 4) {
-      alert('Adicione pelo menos 4 pontos para otimizar a rota com 3-Opt');
-      return;
+  // Função para embaralhar array (Fisher-Yates shuffle)
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
+    return shuffled;
+  };
+
+  // Função para criar embaralhamento baseado em proximidade (Nearest Neighbor)
+  const createNearestNeighborRoute = (points: RoutePoint[]): RoutePoint[] => {
+    if (points.length === 0) return [];
     
-    if (!selectedSeller || !selectedSeller.latitude || !selectedSeller.longitude) {
-      alert('Selecione um vendedor para otimizar a rota');
-      return;
-    }
+    const result: RoutePoint[] = [];
+    const remaining = [...points];
     
-    setIsOptimizing(true);
-    setOptimizationProgress('Iniciando otimização 3-Opt considerando vendedor...');
+    // Começar com o primeiro ponto
+    let current = remaining.shift()!;
+    result.push(current);
     
-    // Simular delay para mostrar loading
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    let currentRoute = [...routePoints]
-      .sort((a, b) => a.order - b.order)
-      .filter(point => point && point.coordinates); // Filtrar pontos válidos
-    
-    // Verificar se temos pontos suficientes após filtragem
-    if (currentRoute.length < 4) {
-      setOptimizationProgress('Não há pontos suficientes para otimização 3-Opt');
-      setIsOptimizing(false);
-      return;
-    }
-    
-    // Resetar a ordem para forçar nova otimização
-    currentRoute = currentRoute.map((point, index) => ({
-      ...point,
-      order: index + 1
-    }));
-    
-    let improved = true;
-    let iterations = 0;
-    const maxIterations = 30; // Limite menor para 3-Opt (mais computacionalmente intensivo)
-    
-    const initialDistance = calculateTotalRouteDistance(currentRoute);
-    console.log('Rota inicial:', currentRoute.map(p => p.lead.companyName));
-    console.log('Distância inicial:', initialDistance.toFixed(2), 'km');
-    
-    // Algoritmo 3-Opt
-    while (improved && iterations < maxIterations) {
-      improved = false;
-      iterations++;
+    // Para cada ponto restante, encontrar o mais próximo
+    while (remaining.length > 0) {
+      let nearestIndex = 0;
+      let nearestDistance = calculateDistance(current.coordinates, remaining[0].coordinates);
       
-      setOptimizationProgress(`Iteração ${iterations} - Analisando melhorias 3-Opt...`);
+      for (let i = 1; i < remaining.length; i++) {
+        const distance = calculateDistance(current.coordinates, remaining[i].coordinates);
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestIndex = i;
+        }
+      }
+      
+      current = remaining.splice(nearestIndex, 1)[0];
+      result.push(current);
+    }
+    
+    return result;
+  };
+
+  // Função para criar embaralhamento baseado em distância do vendedor
+  const createDistanceBasedRoute = (points: RoutePoint[]): RoutePoint[] => {
+    if (!selectedSeller || !selectedSeller.latitude || !selectedSeller.longitude) {
+      return shuffleArray(points);
+    }
+    
+    const sellerCoords: [number, number] = [selectedSeller.latitude, selectedSeller.longitude];
+    
+    // Ordenar por distância do vendedor (mais próximo primeiro)
+    return [...points].sort((a, b) => {
+      const distA = calculateDistance(sellerCoords, a.coordinates);
+      const distB = calculateDistance(sellerCoords, b.coordinates);
+      return distA - distB;
+    });
+  };
+
+  // Função para criar rota baseada em clusters geográficos
+  const createClusterBasedRoute = (points: RoutePoint[]): RoutePoint[] => {
+    if (points.length <= 3) return shuffleArray(points);
+    
+    // Dividir pontos em clusters baseado na latitude
+    const sortedByLat = [...points].sort((a, b) => a.coordinates[0] - b.coordinates[0]);
+    const midPoint = Math.floor(sortedByLat.length / 2);
+    
+    const cluster1 = sortedByLat.slice(0, midPoint);
+    const cluster2 = sortedByLat.slice(midPoint);
+    
+    // Embaralhar cada cluster
+    const shuffledCluster1 = shuffleArray(cluster1);
+    const shuffledCluster2 = shuffleArray(cluster2);
+    
+    // Alternar entre clusters
+    const result: RoutePoint[] = [];
+    const maxLength = Math.max(shuffledCluster1.length, shuffledCluster2.length);
+    
+    for (let i = 0; i < maxLength; i++) {
+      if (i < shuffledCluster1.length) result.push(shuffledCluster1[i]);
+      if (i < shuffledCluster2.length) result.push(shuffledCluster2[i]);
+    }
+    
+    return result;
+  };
+
+  // Função para criar rota com perturbação aleatória
+  const createPerturbedRoute = (points: RoutePoint[]): RoutePoint[] => {
+    const route = [...points];
+    
+    // Aplicar múltiplas perturbações aleatórias
+    for (let i = 0; i < Math.floor(points.length / 2); i++) {
+      const index1 = Math.floor(Math.random() * route.length);
+      const index2 = Math.floor(Math.random() * route.length);
+      
+      if (index1 !== index2) {
+        [route[index1], route[index2]] = [route[index2], route[index1]];
+      }
+    }
+    
+    return route;
+  };
+
+  // Função para aplicar 2-Opt como perturbação
+  const applyRandom2Opt = (route: RoutePoint[]): RoutePoint[] => {
+    if (route.length < 4) return route;
+    
+    const newRoute = [...route];
+    const i = Math.floor(Math.random() * (newRoute.length - 1));
+    const j = Math.floor(Math.random() * (newRoute.length - 1));
+    
+    if (Math.abs(i - j) > 1) {
+      // Aplicar 2-Opt swap
+      const segment = newRoute.slice(Math.min(i, j) + 1, Math.max(i, j) + 1);
+      segment.reverse();
+      newRoute.splice(Math.min(i, j) + 1, Math.max(i, j) - Math.min(i, j), ...segment);
+    }
+    
+    return newRoute;
+  };
+
+  // Função para otimizar uma rota específica com 3-Opt e perturbações
+  const optimizeSingleRoute = async (route: RoutePoint[], attemptNumber: number): Promise<{ route: RoutePoint[], distance: number, iterations: number }> => {
+    let currentRoute = [...route];
+    let bestRoute = [...route];
+    let bestDistance = calculateTotalRouteDistance(currentRoute);
+    let iterations = 0;
+    let stagnationCount = 0;
+    const maxIterations = 25;
+    const maxStagnation = 5;
+    
+    while (iterations < maxIterations) {
+      iterations++;
       
       let bestGain = 0;
       let bestI = -1;
@@ -504,46 +586,128 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
         }
       }
       
-      console.log(`Iteração ${iterations}: Melhor ganho encontrado: ${bestGain.toFixed(3)} km`);
-      
       // Aplicar a melhor troca encontrada
       if (bestGain > 0.001) {
-        console.log(`Aplicando troca 3-Opt: i=${bestI}, j=${bestJ}, k=${bestK}`);
         currentRoute = apply3OptSwap(currentRoute, bestI, bestJ, bestK);
-        improved = true;
-        setOptimizationProgress(`Iteração ${iterations} - Melhoria encontrada! Ganho: ${bestGain.toFixed(2)} km`);
+        stagnationCount = 0;
         
-        console.log('Nova rota:', currentRoute.map(p => p.lead.companyName));
+        // Verificar se é a melhor rota até agora
+        const currentDistance = calculateTotalRouteDistance(currentRoute);
+        if (currentDistance < bestDistance) {
+          bestRoute = [...currentRoute];
+          bestDistance = currentDistance;
+        }
+      } else {
+        stagnationCount++;
         
-        // Pequeno delay para mostrar progresso
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Se estagnou, aplicar perturbação
+        if (stagnationCount >= maxStagnation) {
+          currentRoute = applyRandom2Opt(currentRoute);
+          stagnationCount = 0;
+        }
       }
     }
     
-    const finalDistance = calculateTotalRouteDistance(currentRoute);
-    const totalImprovement = initialDistance - finalDistance;
+    return {
+      route: bestRoute,
+      distance: bestDistance,
+      iterations
+    };
+  };
+
+  // Função para otimizar a rota usando múltiplas tentativas com embaralhamento
+  const optimizeRoute = async () => {
+    if (routePoints.length < 4) {
+      alert('Adicione pelo menos 4 pontos para otimizar a rota com 3-Opt');
+      return;
+    }
     
-    console.log('Rota final:', currentRoute.map(p => p.lead.companyName));
-    console.log('Distância final:', finalDistance.toFixed(2), 'km');
-    console.log('Melhoria total:', totalImprovement.toFixed(2), 'km');
+    if (!selectedSeller || !selectedSeller.latitude || !selectedSeller.longitude) {
+      alert('Selecione um vendedor para otimizar a rota');
+      return;
+    }
     
-    // Atualizar a ordem dos pontos
-    const optimizedPoints = currentRoute.map((point, index) => ({
+    setIsOptimizing(true);
+    setOptimizationProgress('Iniciando otimização com múltiplas tentativas...');
+    
+    // Simular delay para mostrar loading
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    let baseRoute = [...routePoints]
+      .sort((a, b) => a.order - b.order)
+      .filter(point => point && point.coordinates); // Filtrar pontos válidos
+    
+    // Verificar se temos pontos suficientes após filtragem
+    if (baseRoute.length < 4) {
+      setOptimizationProgress('Não há pontos suficientes para otimização 3-Opt');
+      setIsOptimizing(false);
+      return;
+    }
+    
+    const initialDistance = calculateTotalRouteDistance(baseRoute);
+    
+    // Criar 5 versões com estratégias diferentes de embaralhamento
+    const attempts = [
+      // Tentativa 1: Ordem original
+      {
+        route: baseRoute.map((point, index) => ({ ...point, order: index + 1 })),
+        strategy: 'Ordem Original'
+      },
+      // Tentativa 2: Nearest Neighbor (algoritmo guloso)
+      {
+        route: createNearestNeighborRoute(baseRoute).map((point, index) => ({ ...point, order: index + 1 })),
+        strategy: 'Nearest Neighbor'
+      },
+      // Tentativa 3: Ordenado por distância do vendedor
+      {
+        route: createDistanceBasedRoute(baseRoute).map((point, index) => ({ ...point, order: index + 1 })),
+        strategy: 'Distância do Vendedor'
+      },
+      // Tentativa 4: Clusters geográficos
+      {
+        route: createClusterBasedRoute(baseRoute).map((point, index) => ({ ...point, order: index + 1 })),
+        strategy: 'Clusters Geográficos'
+      },
+      // Tentativa 5: Perturbação aleatória + 2-Opt
+      {
+        route: applyRandom2Opt(createPerturbedRoute(baseRoute)).map((point, index) => ({ ...point, order: index + 1 })),
+        strategy: 'Perturbação + 2-Opt'
+      }
+    ];
+    
+    const results: { route: RoutePoint[], distance: number, iterations: number, strategy: string }[] = [];
+    
+    // Otimizar cada tentativa
+    for (let i = 0; i < attempts.length; i++) {
+      setOptimizationProgress(`Otimizando tentativa ${i + 1}/5 (${attempts[i].strategy})...`);
+      const result = await optimizeSingleRoute(attempts[i].route, i + 1);
+      results.push({ ...result, strategy: attempts[i].strategy });
+      
+      // Pequeno delay entre tentativas
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
+    
+    // Encontrar a melhor tentativa
+    const bestResult = results.reduce((best, current) => 
+      current.distance < best.distance ? current : best
+    );
+    
+    const totalImprovement = initialDistance - bestResult.distance;
+    const bestAttemptIndex = results.findIndex(r => r === bestResult) + 1;
+    
+    // Atualizar a ordem dos pontos com a melhor rota
+    const optimizedPoints = bestResult.route.map((point, index) => ({
       ...point,
       order: index + 1
     }));
     
     setRoutePoints(optimizedPoints);
     
-    if (iterations >= maxIterations) {
-      setOptimizationProgress(`Limite de iterações atingido. Melhoria: ${totalImprovement.toFixed(2)}km`);
-    } else {
-      setOptimizationProgress(`Otimização 3-Opt concluída! ${iterations} iterações. Melhoria: ${totalImprovement.toFixed(2)}km`);
-    }
+    setOptimizationProgress(`Melhor rota: ${bestResult.strategy} (tentativa ${bestAttemptIndex})! Melhoria: ${totalImprovement.toFixed(2)}km`);
     
     setTimeout(() => {
       setOptimizationProgress('');
-    }, 3000);
+    }, 4000);
     
     setIsOptimizing(false);
   };
@@ -572,28 +736,12 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
       // Distância do último ponto para o vendedor
       const distFromLast = calculateDistance(sortedPoints[sortedPoints.length - 1].coordinates, sellerCoords);
       total += distFromLast;
-      
-      // Debug log
-      console.log('Cálculo de distância com vendedor:', {
-        vendedor: selectedSeller.name,
-        vendedorCoords: sellerCoords,
-        pontos: sortedPoints.length,
-        distToFirst: distToFirst.toFixed(2),
-        distFromLast: distFromLast.toFixed(2),
-        total: total.toFixed(2)
-      });
     } else {
       // Se não há vendedor, calcular apenas distâncias entre pontos
       for (let i = 0; i < sortedPoints.length - 1; i++) {
         const dist = calculateDistance(sortedPoints[i].coordinates, sortedPoints[i + 1].coordinates);
         total += dist;
       }
-      
-      // Debug log
-      console.log('Cálculo de distância sem vendedor:', {
-        pontos: sortedPoints.length,
-        total: total.toFixed(2)
-      });
     }
     
     return total;
@@ -714,7 +862,7 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                     onClick={optimizeRoute}
                     disabled={isOptimizing}
                     className="leads-map-route-optimize-button"
-                    title="Otimizar rota com algoritmo 3-Opt"
+                    title="Otimizar rota com múltiplas tentativas 3-Opt"
                   >
                     {isOptimizing ? '⏳' : 'Calcular rota'}
                   </button>
@@ -894,10 +1042,6 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
             const isInRoute = routePoints.some(point => point.lead.id === lead.id);
             const routeOrder = routePoints.find(point => point.lead.id === lead.id)?.order;
             const isHovered = hoveredRouteItem === lead.id;
-            
-            if (isHovered) {
-              console.log('Marcador em hover:', lead.companyName, 'ID:', lead.id);
-            }
 
             return (
               <CircleMarker
