@@ -41,6 +41,7 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
   const [optimizationProgress, setOptimizationProgress] = useState('');
   const [hoveredRouteItem, setHoveredRouteItem] = useState<string | null>(null);
   const [sellers, setSellers] = useState<Seller[]>([]);
+  const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
   const hoverOpenTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
 
   // Limpar timeouts ao desmontar
@@ -270,6 +271,7 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
 
   const clearRoute = () => {
     setRoutePoints([]);
+    setSelectedSeller(null);
   };
 
   const exportToGoogleMaps = () => {
@@ -281,13 +283,24 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
     // Ordenar pontos pela ordem de visitação
     const sortedPoints = [...routePoints].sort((a, b) => a.order - b.order);
     
-    // Criar URL do Google Maps com múltiplos destinos
-    const destinations = sortedPoints.map(point => 
+    // Se há vendedor selecionado, usar como ponto de partida
+    let destinations: string[] = [];
+    if (selectedSeller && selectedSeller.latitude && selectedSeller.longitude) {
+      destinations.push(`${selectedSeller.latitude},${selectedSeller.longitude}`);
+    }
+    
+    // Adicionar pontos da rota
+    destinations.push(...sortedPoints.map(point => 
       `${point.coordinates[0]},${point.coordinates[1]}`
-    ).join('/');
+    ));
+    
+    // Se há vendedor selecionado, usar como ponto final também
+    if (selectedSeller && selectedSeller.latitude && selectedSeller.longitude && destinations.length > 1) {
+      destinations.push(`${selectedSeller.latitude},${selectedSeller.longitude}`);
+    }
     
     // URL do Google Maps com direções
-    const googleMapsUrl = `https://www.google.com/maps/dir/${destinations}`;
+    const googleMapsUrl = `https://www.google.com/maps/dir/${destinations.join('/')}`;
     
     // Abrir em nova aba
     window.open(googleMapsUrl, '_blank');
@@ -377,6 +390,11 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
   // Função para otimizar a rota usando algoritmo 2-Opt
   const optimizeRoute = async () => {
     if (routePoints.length < 3) return;
+    
+    if (!selectedSeller || !selectedSeller.latitude || !selectedSeller.longitude) {
+      alert('Selecione um vendedor para otimizar a rota');
+      return;
+    }
     
     setIsOptimizing(true);
     setOptimizationProgress('Iniciando otimização...');
@@ -476,12 +494,28 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
     return total;
   }, [routePoints]);
 
-  // Obter coordenadas da rota para o Polyline
+  // Obter coordenadas da rota para o Polyline (incluindo vendedor se selecionado)
   const routeCoordinates = useMemo(() => {
-    return routePoints
+    const coordinates: [number, number][] = [];
+    
+    // Adicionar ponto inicial do vendedor se selecionado
+    if (selectedSeller && selectedSeller.latitude && selectedSeller.longitude) {
+      coordinates.push([selectedSeller.latitude, selectedSeller.longitude]);
+    }
+    
+    // Adicionar pontos da rota ordenados
+    coordinates.push(...routePoints
       .sort((a, b) => a.order - b.order)
-      .map(point => point.coordinates);
-  }, [routePoints]);
+      .map(point => point.coordinates)
+    );
+    
+    // Adicionar ponto final do vendedor se selecionado (e há pontos na rota)
+    if (selectedSeller && selectedSeller.latitude && selectedSeller.longitude && routePoints.length > 0) {
+      coordinates.push([selectedSeller.latitude, selectedSeller.longitude]);
+    }
+    
+    return coordinates;
+  }, [routePoints, selectedSeller]);
 
   if (loading) {
     return (
@@ -601,6 +635,26 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
               </div>
             </div>
             
+            {/* Seleção de vendedor */}
+            <div className="leads-map-route-seller-selection">
+              <label className="leads-map-route-seller-label">Vendedor responsável:</label>
+              <select
+                value={selectedSeller?.id || ''}
+                onChange={(e) => {
+                  const seller = sellers.find(s => s.id === e.target.value);
+                  setSelectedSeller(seller || null);
+                }}
+                className="leads-map-route-seller-select"
+              >
+                <option value="">Selecione um vendedor</option>
+                {sellers.map(seller => (
+                  <option key={seller.id} value={seller.id}>
+                    {seller.name} - {seller.responsibleRegion}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
             <div className="leads-map-route-panel-content">
               {isOptimizing ? (
                 <div className="leads-map-route-optimizing">
@@ -615,17 +669,27 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                 </p>
               ) : (
                 <div className="leads-map-route-list">
+                  {/* Ponto inicial do vendedor */}
+                  {selectedSeller && selectedSeller.latitude && selectedSeller.longitude && (
+                    <div className="leads-map-route-item leads-map-route-item-start">
+                      <div className="leads-map-route-fixed-tag start">
+                        <span className="leads-map-route-fixed-pin">🏠</span>
+                        <span className="leads-map-route-fixed-text">Início</span>
+                      </div>
+                      <div className="leads-map-route-item-number">0</div>
+                      <div className="leads-map-route-item-content">
+                        <div className="leads-map-route-item-name">{selectedSeller.name}</div>
+                        <div className="leads-map-route-item-address">{selectedSeller.address}, {selectedSeller.city}/{selectedSeller.state}</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Pontos da rota */}
                   {routePoints
                     .sort((a, b) => a.order - b.order)
                     .map((point, index) => {
-                      const isStart = index === 0;
-                      const isEnd = index === (routePoints.length - 1);
                       const isHovered = hoveredRouteItem === point.lead.id;
-                      const itemClass = isStart
-                        ? 'leads-map-route-item leads-map-route-item-start'
-                        : isEnd
-                          ? 'leads-map-route-item leads-map-route-item-end'
-                          : 'leads-map-route-item';
+                      const itemClass = 'leads-map-route-item'; // Todos os pontos da rota são iguais agora
                       const finalClass = isHovered ? `${itemClass} leads-map-route-item-hovered` : itemClass;
                       return (
                       <div 
@@ -638,12 +702,6 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                           setHoveredRouteItem(null);
                         }}
                       >
-                        {(isStart || isEnd) && (
-                          <div className={`leads-map-route-fixed-tag ${isStart ? 'start' : 'end'}`}>
-                            <span className="leads-map-route-fixed-pin">📌</span>
-                            <span className="leads-map-route-fixed-text">{isStart ? 'Início' : 'Destino'}</span>
-                          </div>
-                        )}
                         <div className="leads-map-route-item-number">
                           {point.order}
                         </div>
@@ -655,35 +713,48 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                             {formatAddress(point.lead)}
                           </div>
                         </div>
-                         {(!isStart && !isEnd) && (
-                          <div className="leads-map-route-item-actions">
-                            <button
-                              onClick={() => movePointUp(index)}
-                              disabled={index === 0}
-                              className="leads-map-route-action-button"
-                              title="Mover para cima"
-                            >
-                              ↑
-                            </button>
-                            <button
-                              onClick={() => movePointDown(index)}
-                              disabled={index === routePoints.length - 1}
-                              className="leads-map-route-action-button"
-                              title="Mover para baixo"
-                            >
-                              ↓
-                            </button>
-                            <button
-                              onClick={() => removeFromRoute(point.lead.id)}
-                              className="leads-map-route-action-button"
-                              title="Remover da rota"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        )}
+                        <div className="leads-map-route-item-actions">
+                          <button
+                            onClick={() => movePointUp(index)}
+                            disabled={index === 0}
+                            className="leads-map-route-action-button"
+                            title="Mover para cima"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            onClick={() => movePointDown(index)}
+                            disabled={index === routePoints.length - 1}
+                            className="leads-map-route-action-button"
+                            title="Mover para baixo"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            onClick={() => removeFromRoute(point.lead.id)}
+                            className="leads-map-route-action-button"
+                            title="Remover da rota"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
                     );})}
+                  
+                  {/* Ponto final do vendedor */}
+                  {selectedSeller && selectedSeller.latitude && selectedSeller.longitude && routePoints.length > 0 && (
+                    <div className="leads-map-route-item leads-map-route-item-end">
+                      <div className="leads-map-route-fixed-tag end">
+                        <span className="leads-map-route-fixed-pin">🏠</span>
+                        <span className="leads-map-route-fixed-text">Destino</span>
+                      </div>
+                      <div className="leads-map-route-item-number">{routePoints.length + 1}</div>
+                      <div className="leads-map-route-item-content">
+                        <div className="leads-map-route-item-name">{selectedSeller.name}</div>
+                        <div className="leads-map-route-item-address">{selectedSeller.address}, {selectedSeller.city}/{selectedSeller.state}</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

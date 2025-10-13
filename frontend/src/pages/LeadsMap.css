@@ -340,6 +340,45 @@
   transform: translateY(-1px);
 }
 
+.leads-map-route-seller-selection {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.leads-map-route-seller-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.leads-map-route-seller-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  color: #374151;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.leads-map-route-seller-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.leads-map-route-panel-seller {
+  font-size: 11px;
+  color: #6b7280;
+  margin: 2px 0 0 0;
+  font-weight: 500;
+}
+
 /* Animação para item da rota em hover */
 .leads-map-route-item-hovered {
   background-color: #f0f9ff !important;
