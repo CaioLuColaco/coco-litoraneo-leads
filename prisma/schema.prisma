@@ -241,6 +241,7 @@ model Seller {
   responsibleRegion String
   latitude  Float?
   longitude Float?
+  imageUrl  String?
   routes Routes[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

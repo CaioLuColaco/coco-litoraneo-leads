@@ -20,6 +20,7 @@ const Sellers: React.FC = () => {
     state: '',
     zipCode: '',
     responsibleRegion: '',
+    imageUrl: '',
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -227,6 +228,7 @@ const Sellers: React.FC = () => {
                           responsibleRegion: s.responsibleRegion,
                           latitude: s.latitude ?? undefined,
                           longitude: s.longitude ?? undefined,
+                          imageUrl: s.imageUrl ?? undefined,
                         }); setEditingId(s.id); setIsCreating(true); }}
                         title="Editar"
                       >
@@ -326,6 +328,11 @@ const Sellers: React.FC = () => {
                   <label>Região responsável</label>
                   <input type="text" value={form.responsibleRegion} onChange={(e) => handleInputChange('responsibleRegion', e.target.value)} />
                   {formErrors.responsibleRegion && <span className="leads-map-form-error">{formErrors.responsibleRegion}</span>}
+                </div>
+
+                <div className="leads-map-form-field" style={{ gridColumn: '1 / -1' }}>
+                  <label>URL da imagem de perfil (opcional)</label>
+                  <input type="url" value={form.imageUrl ?? ''} onChange={(e) => handleInputChange('imageUrl', e.target.value)} placeholder="https://..." />
                 </div>
 
               </div>

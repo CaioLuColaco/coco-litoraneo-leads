@@ -51,6 +51,7 @@ sellersRoutes.post('/', async (req, res, next) => {
         responsibleRegion: String(responsibleRegion).trim(),
         latitude: typeof latitude === 'number' ? latitude : (latitude ? Number(latitude) : null),
         longitude: typeof longitude === 'number' ? longitude : (longitude ? Number(longitude) : null),
+        imageUrl: req.body?.imageUrl ? String(req.body.imageUrl).trim() : null,
       },
     });
     res.status(201).json({ success: true, data: seller, message: 'Created', timestamp: new Date().toISOString() });
@@ -81,6 +82,9 @@ sellersRoutes.put('/:id', async (req, res) => {
       data.longitude = Number.isFinite(lonNum) ? lonNum : null;
     }
 
+    if (data.imageUrl !== undefined) {
+      data.imageUrl = data.imageUrl ? String(data.imageUrl).trim() : null;
+    }
     const updated = await prisma.seller.update({ where: { id }, data });
     res.json({ success: true, data: updated, message: 'Updated', timestamp: new Date().toISOString() });
   } catch (err: any) {

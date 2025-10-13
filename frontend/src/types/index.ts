@@ -125,6 +125,7 @@ export interface Seller {
   responsibleRegion: string;
   latitude?: number | null;
   longitude?: number | null;
+  imageUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -141,6 +142,7 @@ export interface CreateSellerRequest {
   responsibleRegion: string;
   latitude?: number | null;
   longitude?: number | null;
+  imageUrl?: string | null;
 }
 
 // Interfaces para sistema de pontuação configurável

@@ -878,6 +878,11 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
               <Popup>
                 <div className="leads-map-popup">
                   <h3 className="leads-map-popup-title">{seller.name}</h3>
+                  {seller.imageUrl && (
+                    <div style={{ margin: '8px 0' }}>
+                      <img src={seller.imageUrl} alt={seller.name} style={{ width: '100%', height: 'auto', borderRadius: '6px', objectFit: 'cover' }} />
+                    </div>
+                  )}
                   <p className="leads-map-popup-text"><strong>E-mail:</strong> {seller.email}</p>
                   <p className="leads-map-popup-text"><strong>Telefone:</strong> {seller.phone}</p>
                   <p className="leads-map-popup-text"><strong>Região:</strong> {seller.responsibleRegion}</p>
