@@ -315,6 +315,37 @@
   cursor: not-allowed;
 }
 
+.leads-map-route-export-button {
+  background: #10b981;
+  border: 1px solid #10b981;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.leads-map-route-export-button:hover {
+  background: #059669;
+  border-color: #059669;
+  transform: translateY(-1px);
+}
+
+/* Animação para item da rota em hover */
+.leads-map-route-item-hovered {
+  background-color: #f0f9ff !important;
+  border-left: 4px solid #3b82f6 !important;
+  transform: translateX(2px);
+  transition: all 0.2s ease;
+}
+
+/* Animação para marcador em hover - agora controlada via props do CircleMarker */
+
 .leads-map-route-panel-content {
   max-height: calc(100vh - 280px);
   overflow-y: auto;

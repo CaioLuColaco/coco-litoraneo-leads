@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Popup, CircleMarker, Polyline } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import { Lead } from '../types';
@@ -38,6 +38,18 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
   const [isRouteMode, setIsRouteMode] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationProgress, setOptimizationProgress] = useState('');
+  const [hoveredRouteItem, setHoveredRouteItem] = useState<string | null>(null);
+  const hoverOpenTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
+
+  // Limpar timeouts ao desmontar
+  useEffect(() => {
+    return () => {
+      Object.values(hoverOpenTimeoutsRef.current).forEach((t) => {
+        if (t) clearTimeout(t);
+      });
+      hoverOpenTimeoutsRef.current = {};
+    };
+  }, []);
 
   // Buscar leads
   useEffect(() => {
@@ -243,6 +255,27 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
 
   const clearRoute = () => {
     setRoutePoints([]);
+  };
+
+  const exportToGoogleMaps = () => {
+    if (routePoints.length < 2) {
+      alert('Adicione pelo menos 2 pontos à rota para exportar');
+      return;
+    }
+
+    // Ordenar pontos pela ordem de visitação
+    const sortedPoints = [...routePoints].sort((a, b) => a.order - b.order);
+    
+    // Criar URL do Google Maps com múltiplos destinos
+    const destinations = sortedPoints.map(point => 
+      `${point.coordinates[0]},${point.coordinates[1]}`
+    ).join('/');
+    
+    // URL do Google Maps com direções
+    const googleMapsUrl = `https://www.google.com/maps/dir/${destinations}`;
+    
+    // Abrir em nova aba
+    window.open(googleMapsUrl, '_blank');
   };
 
   const movePointUp = (index: number) => {
@@ -532,6 +565,15 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                     {isOptimizing ? '⏳' : 'Calcular rota'}
                   </button>
                 )}
+                {routePoints.length >= 2 && (
+                  <button
+                    onClick={exportToGoogleMaps}
+                    className="leads-map-route-export-button"
+                    title="Exportar rota para Google Maps"
+                  >
+                    📍 Google Maps
+                  </button>
+                )}
                 {routePoints.length > 0 && (
                   <button
                     onClick={clearRoute}
@@ -563,13 +605,24 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                     .map((point, index) => {
                       const isStart = index === 0;
                       const isEnd = index === (routePoints.length - 1);
+                      const isHovered = hoveredRouteItem === point.lead.id;
                       const itemClass = isStart
                         ? 'leads-map-route-item leads-map-route-item-start'
                         : isEnd
                           ? 'leads-map-route-item leads-map-route-item-end'
                           : 'leads-map-route-item';
+                      const finalClass = isHovered ? `${itemClass} leads-map-route-item-hovered` : itemClass;
                       return (
-                      <div key={point.lead.id} className={itemClass}>
+                      <div 
+                        key={point.lead.id} 
+                        className={finalClass}
+                        onMouseEnter={() => {
+                          setHoveredRouteItem(point.lead.id);
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredRouteItem(null);
+                        }}
+                      >
                         {(isStart || isEnd) && (
                           <div className={`leads-map-route-fixed-tag ${isStart ? 'start' : 'end'}`}>
                             <span className="leads-map-route-fixed-pin">📌</span>
@@ -646,23 +699,42 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
 
             const isInRoute = routePoints.some(point => point.lead.id === lead.id);
             const routeOrder = routePoints.find(point => point.lead.id === lead.id)?.order;
+            const isHovered = hoveredRouteItem === lead.id;
+            
+            if (isHovered) {
+              console.log('Marcador em hover:', lead.companyName, 'ID:', lead.id);
+            }
 
             return (
               <CircleMarker
                 key={lead.id}
                 center={coordinates}
-                radius={isInRoute ? 16 : 12}
+                radius={isHovered ? (isInRoute ? 20 : 16) : (isInRoute ? 16 : 12)}
                 fillColor={isInRoute ? '#3b82f6' : getMarkerColor(lead.potentialLevel)}
                 color={isInRoute ? '#1d4ed8' : getMarkerColor(lead.potentialLevel)}
-                weight={isInRoute ? 4 : 3}
-                opacity={1}
-                fillOpacity={0.8}
+                weight={isHovered ? 5 : (isInRoute ? 4 : 3)}
+                opacity={isHovered ? 0.9 : 1}
+                fillOpacity={isHovered ? 0.9 : 0.8}
                 eventHandlers={{
                   click: () => addToRoute(lead),
                   mouseover: (e: any) => {
-                    e.target.openPopup();
+                    // Abrir popup após 500ms se o mouse permanecer no marcador
+                    const id = lead.id;
+                    if (hoverOpenTimeoutsRef.current[id]) {
+                      clearTimeout(hoverOpenTimeoutsRef.current[id] as NodeJS.Timeout);
+                    }
+                    hoverOpenTimeoutsRef.current[id] = setTimeout(() => {
+                      e.target.openPopup();
+                      hoverOpenTimeoutsRef.current[id] = null;
+                    }, 250);
                   },
                   mouseout: (e: any) => {
+                    // Cancelar abertura adiada, se existir
+                    const id = lead.id;
+                    if (hoverOpenTimeoutsRef.current[id]) {
+                      clearTimeout(hoverOpenTimeoutsRef.current[id] as NodeJS.Timeout);
+                      hoverOpenTimeoutsRef.current[id] = null;
+                    }
                     // Aguardar um pouco antes de fechar para permitir mouseover no popup
                     setTimeout(() => {
                       const popup = e.target.getPopup();
