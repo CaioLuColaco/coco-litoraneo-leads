@@ -355,6 +355,120 @@
   overflow-y: auto;
 }
 
+/* Modal genérico reaproveitando estética existente */
+.leads-map-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.leads-overlay-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.leads-map-modal {
+  background: #fff;
+  width: 720px;
+  max-width: calc(100vw - 32px);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  padding: 16px;
+}
+
+.leads-map-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.leads-map-form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.leads-map-form-field label {
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.leads-map-form-field input {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.leads-map-form-field input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+
+.leads-map-form-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.leads-map-modal-actions {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.seller-cancel-button {
+  background-color: white;
+  border: 1px solid #d1d5db;
+  color: #6b7280;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.seller-save-button {
+  background-color: white;
+  border: 1px solid #d1d5db;
+  color: #6b7280;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.seller-save-button:hover:not(:disabled) {
+  background-color: #d1fae5;
+  color: #047857;
+}
+
+.seller-save-button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.seller-cancel-button:hover:not(:disabled) {
+  background-color: #fad9d9;
+  color: #dc2626;
+}
+
+.seller-cancel-button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
 .leads-map-route-empty {
   padding: 24px 16px;
   text-align: center;

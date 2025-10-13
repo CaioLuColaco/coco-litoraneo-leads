@@ -111,6 +111,34 @@ export interface UploadResponse {
   processingStarted: string;
 }
 
+// Tipos para Vendedores
+export interface Seller {
+  id: string;
+  name: string;
+  birthDate: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  responsibleRegion: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSellerRequest {
+  name: string;
+  birthDate: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  responsibleRegion: string;
+}
+
 // Interfaces para sistema de pontuação configurável
 export interface ScoringConfig {
   id: string;

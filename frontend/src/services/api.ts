@@ -1,5 +1,15 @@
 import axios from 'axios';
-import { LoginData, RegisterData, Lead, ApiResponse, UploadResponse, ScoringConfig, CreateScoringCategoryRequest } from '../types';
+import {
+  LoginData,
+  RegisterData,
+  Lead,
+  ApiResponse,
+  UploadResponse,
+  ScoringConfig,
+  CreateScoringCategoryRequest,
+  Seller,
+  CreateSellerRequest
+} from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
@@ -162,6 +172,17 @@ export const scoringAPI = {
   // Obter detalhes da pontuação
   getScoreDetails: async (data: any): Promise<any> => {
     const response = await api.post<ApiResponse<any>>('/scoring/score-details', data);
+    return response.data.data;
+  },
+};
+
+export const sellersAPI = {
+  getAll: async (): Promise<Seller[]> => {
+    const response = await api.get<ApiResponse<Seller[]>>('/sellers');
+    return response.data.data;
+  },
+  create: async (data: CreateSellerRequest): Promise<Seller> => {
+    const response = await api.post<ApiResponse<Seller>>('/sellers', data);
     return response.data.data;
   },
 };

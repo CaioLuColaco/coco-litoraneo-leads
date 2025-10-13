@@ -42,6 +42,13 @@ const Navigation: React.FC = () => {
           >
             🗺️ Mapa
           </Link>
+
+          <Link
+            to="/vendedores"
+            className={`nav-link ${isActive('/vendedores') ? 'active' : ''}`}
+          >
+            🧑‍💼 Vendedores
+          </Link>
           
           <Link
             to="/configuracao-pontuacao"
