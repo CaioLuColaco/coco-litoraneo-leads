@@ -550,19 +550,19 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                 <h3 className="leads-map-route-panel-title">Rota ({routePoints.length})</h3>
                 {routePoints.length >= 2 && (
                   <p className="leads-map-route-panel-distance">
-                    Distância total: {totalDistance.toFixed(1)} km
+                    {totalDistance.toFixed(1)} km
                   </p>
                 )}
               </div>
               <div className="leads-map-route-panel-actions">
-                {routePoints.length >= 3 && (
+                {routePoints.length >= 4 && (
                   <button
                     onClick={optimizeRoute}
                     disabled={isOptimizing}
                     className="leads-map-route-optimize-button"
                     title="Otimizar rota"
                   >
-                    {isOptimizing ? '⏳' : 'Calcular rota'}
+                    {isOptimizing ? '⏳' : 'Calcular \nrota'}
                   </button>
                 )}
                 {routePoints.length >= 2 && (
@@ -571,7 +571,7 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                     className="leads-map-route-export-button"
                     title="Exportar rota para Google Maps"
                   >
-                    📍 Google Maps
+                    <span>📍</span> Google Maps
                   </button>
                 )}
                 {routePoints.length > 0 && (
