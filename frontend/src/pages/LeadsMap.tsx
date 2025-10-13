@@ -1240,25 +1240,41 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
         </div>
 
         {/* Componente do vendedor selecionado */}
-        {selectedSeller && (
-          <div className="leads-map-seller-info">
-            <div className="leads-map-seller-info-content">
-              {selectedSeller.imageUrl && (
-                <div className="leads-map-seller-info-photo">
-                  <img 
-                    src={selectedSeller.imageUrl} 
-                    alt={selectedSeller.name}
-                    className="leads-map-seller-info-img"
-                  />
-                </div>
-              )}
-              <div className="leads-map-seller-info-details">
-                <div className="leads-map-seller-info-name">{selectedSeller.name}</div>
-                <div className="leads-map-seller-info-region">{selectedSeller.responsibleRegion}</div>
-              </div>
-            </div>
-          </div>
-        )}
+       {selectedSeller && (
+         <div className="leads-map-seller-info">
+           <div className="leads-map-seller-info-content">
+             <div className="leads-map-seller-info-photo">
+               {selectedSeller.imageUrl ? (
+                 <img 
+                   src={selectedSeller.imageUrl} 
+                   alt={selectedSeller.name}
+                   className="leads-map-seller-info-img"
+                 />
+               ) : (
+                 <div className="leads-map-seller-info-icon">
+                   <svg 
+                     width="24" 
+                     height="24" 
+                     viewBox="0 0 24 24" 
+                     fill="none" 
+                     stroke="currentColor" 
+                     strokeWidth="2" 
+                     strokeLinecap="round" 
+                     strokeLinejoin="round"
+                   >
+                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                     <circle cx="12" cy="7" r="4"></circle>
+                   </svg>
+                 </div>
+               )}
+             </div>
+             <div className="leads-map-seller-info-details">
+               <div className="leads-map-seller-info-name">{selectedSeller.name}</div>
+               <div className="leads-map-seller-info-region">{selectedSeller.responsibleRegion}</div>
+             </div>
+           </div>
+         </div>
+       )}
       </div>
     </div>
   );
