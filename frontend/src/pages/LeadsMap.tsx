@@ -274,6 +274,25 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
     setSelectedSeller(null);
   };
 
+  // Função para recalcular rota quando vendedor muda
+  const recalculateRouteForSeller = (newSeller: Seller | null) => {
+    if (routePoints.length >= 3 && newSeller && newSeller.latitude && newSeller.longitude) {
+      // Reordenar pontos baseado na proximidade do novo vendedor
+      const sellerCoords: [number, number] = [newSeller.latitude, newSeller.longitude];
+      
+      const sortedPoints = [...routePoints].sort((a, b) => {
+        const distA = calculateDistance(sellerCoords, a.coordinates);
+        const distB = calculateDistance(sellerCoords, b.coordinates);
+        return distA - distB;
+      });
+      
+      setRoutePoints(sortedPoints.map((point, index) => ({
+        ...point,
+        order: index + 1
+      })));
+    }
+  };
+
   const exportToGoogleMaps = () => {
     if (routePoints.length < 2) {
       alert('Adicione pelo menos 2 pontos à rota para exportar');
@@ -341,55 +360,85 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
     return R * c;
   };
 
-  // Função para calcular ganho de uma troca 2-Opt
-  const calculate2OptGain = (
+  // Função para calcular distância total da rota considerando vendedor
+  const calculateTotalRouteDistance = (route: RoutePoint[]): number => {
+    if (route.length < 2) return 0;
+    
+    let totalDistance = 0;
+    const sellerCoords: [number, number] | null = selectedSeller && selectedSeller.latitude && selectedSeller.longitude 
+      ? [selectedSeller.latitude, selectedSeller.longitude] 
+      : null;
+    
+    // Distância do vendedor para o primeiro ponto (se houver vendedor)
+    if (sellerCoords && route.length > 0) {
+      totalDistance += calculateDistance(sellerCoords, route[0].coordinates);
+    }
+    
+    // Distâncias entre pontos consecutivos
+    for (let i = 0; i < route.length - 1; i++) {
+      totalDistance += calculateDistance(route[i].coordinates, route[i + 1].coordinates);
+    }
+    
+    // Distância do último ponto para o vendedor (se houver vendedor)
+    if (sellerCoords && route.length > 0) {
+      totalDistance += calculateDistance(route[route.length - 1].coordinates, sellerCoords);
+    }
+    
+    return totalDistance;
+  };
+
+  // Função para calcular ganho de uma troca 3-Opt considerando vendedor
+  const calculate3OptGain = (
     route: RoutePoint[], 
     i: number, 
-    j: number
+    j: number, 
+    k: number
   ): number => {
     const n = route.length;
     
-    // Verificar limites e existência dos pontos
-    if (i < 0 || j >= n || i >= j - 1 || 
-        !route[i] || !route[i + 1] || !route[j] || !route[j + 1]) {
+    // Verificar limites
+    if (i < 0 || j <= i || k <= j || k >= n - 1) {
       return 0;
     }
     
-    // Distância atual das arestas que serão removidas
-    const currentDistance = 
-      calculateDistance(route[i].coordinates, route[i + 1].coordinates) +
-      calculateDistance(route[j].coordinates, route[j + 1].coordinates);
+    // Calcular distância atual
+    const currentDistance = calculateTotalRouteDistance(route);
     
-    // Distância das novas arestas que serão adicionadas
-    const newDistance = 
-      calculateDistance(route[i].coordinates, route[j].coordinates) +
-      calculateDistance(route[i + 1].coordinates, route[j + 1].coordinates);
+    // Aplicar troca 3-Opt e calcular nova distância
+    const newRoute = apply3OptSwap(route, i, j, k);
+    const newDistance = calculateTotalRouteDistance(newRoute);
     
     return currentDistance - newDistance;
   };
 
-  // Função para aplicar troca 2-Opt
-  const apply2OptSwap = (route: RoutePoint[], i: number, j: number): RoutePoint[] => {
+  // Função para aplicar troca 3-Opt
+  const apply3OptSwap = (route: RoutePoint[], i: number, j: number, k: number): RoutePoint[] => {
     const newRoute = [...route];
     
     // Verificar limites
-    if (i < 0 || j >= newRoute.length || i >= j - 1) {
+    if (i < 0 || j <= i || k <= j || k >= newRoute.length - 1) {
       return newRoute;
     }
     
-    // Troca 2-Opt: reverter o segmento entre i+1 e j
-    if (i + 1 < j) {
-      const segment = newRoute.slice(i + 1, j + 1);
-      segment.reverse();
-      newRoute.splice(i + 1, j - i, ...segment);
-    }
+    // 3-Opt: remover 3 arestas e reconectar de 7 maneiras possíveis
+    // Vamos implementar a reconexão mais comum: trocar segmentos
     
-    return newRoute;
+    // Segmentos originais: [0...i], [i+1...j], [j+1...k], [k+1...n-1]
+    const segment1 = newRoute.slice(0, i + 1);
+    const segment2 = newRoute.slice(i + 1, j + 1);
+    const segment3 = newRoute.slice(j + 1, k + 1);
+    const segment4 = newRoute.slice(k + 1);
+    
+    // Reconexão: [0...i] + [j+1...k] + [i+1...j] + [k+1...n-1]
+    return [...segment1, ...segment3, ...segment2, ...segment4];
   };
 
-  // Função para otimizar a rota usando algoritmo 2-Opt
+  // Função para otimizar a rota usando algoritmo 3-Opt
   const optimizeRoute = async () => {
-    if (routePoints.length < 3) return;
+    if (routePoints.length < 4) {
+      alert('Adicione pelo menos 4 pontos para otimizar a rota com 3-Opt');
+      return;
+    }
     
     if (!selectedSeller || !selectedSeller.latitude || !selectedSeller.longitude) {
       alert('Selecione um vendedor para otimizar a rota');
@@ -397,7 +446,7 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
     }
     
     setIsOptimizing(true);
-    setOptimizationProgress('Iniciando otimização...');
+    setOptimizationProgress('Iniciando otimização 3-Opt considerando vendedor...');
     
     // Simular delay para mostrar loading
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -407,42 +456,49 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
       .filter(point => point && point.coordinates); // Filtrar pontos válidos
     
     // Verificar se temos pontos suficientes após filtragem
-    if (currentRoute.length < 3) {
-      setOptimizationProgress('Não há pontos suficientes para otimização');
+    if (currentRoute.length < 4) {
+      setOptimizationProgress('Não há pontos suficientes para otimização 3-Opt');
       setIsOptimizing(false);
       return;
     }
     
+    // Resetar a ordem para forçar nova otimização
+    currentRoute = currentRoute.map((point, index) => ({
+      ...point,
+      order: index + 1
+    }));
+    
     let improved = true;
     let iterations = 0;
-    const maxIterations = 50; // Limite para evitar loops infinitos
+    const maxIterations = 30; // Limite menor para 3-Opt (mais computacionalmente intensivo)
     
+    const initialDistance = calculateTotalRouteDistance(currentRoute);
     console.log('Rota inicial:', currentRoute.map(p => p.lead.companyName));
-    console.log('Coordenadas:', currentRoute.map(p => p.coordinates));
+    console.log('Distância inicial:', initialDistance.toFixed(2), 'km');
     
-    // Algoritmo 2-Opt
+    // Algoritmo 3-Opt
     while (improved && iterations < maxIterations) {
       improved = false;
       iterations++;
       
-      setOptimizationProgress(`Iteração ${iterations} - Analisando melhorias...`);
+      setOptimizationProgress(`Iteração ${iterations} - Analisando melhorias 3-Opt...`);
       
       let bestGain = 0;
       let bestI = -1;
       let bestJ = -1;
+      let bestK = -1;
       
-      // Tentar todas as possíveis trocas 2-Opt
-      for (let i = 0; i < currentRoute.length - 1; i++) {
-        for (let j = i + 2; j < currentRoute.length; j++) {
-          // Verificar se os pontos existem antes de calcular o ganho
-          if (currentRoute[i] && currentRoute[i + 1] && 
-              currentRoute[j] && currentRoute[j + 1]) {
-            const gain = calculate2OptGain(currentRoute, i, j);
+      // Tentar todas as possíveis trocas 3-Opt
+      for (let i = 0; i < currentRoute.length - 3; i++) {
+        for (let j = i + 1; j < currentRoute.length - 2; j++) {
+          for (let k = j + 1; k < currentRoute.length - 1; k++) {
+            const gain = calculate3OptGain(currentRoute, i, j, k);
             
             if (gain > bestGain) {
               bestGain = gain;
               bestI = i;
               bestJ = j;
+              bestK = k;
             }
           }
         }
@@ -452,8 +508,8 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
       
       // Aplicar a melhor troca encontrada
       if (bestGain > 0.001) {
-        console.log(`Aplicando troca: ${bestI} -> ${bestJ}`);
-        currentRoute = apply2OptSwap(currentRoute, bestI, bestJ);
+        console.log(`Aplicando troca 3-Opt: i=${bestI}, j=${bestJ}, k=${bestK}`);
+        currentRoute = apply3OptSwap(currentRoute, bestI, bestJ, bestK);
         improved = true;
         setOptimizationProgress(`Iteração ${iterations} - Melhoria encontrada! Ganho: ${bestGain.toFixed(2)} km`);
         
@@ -464,11 +520,12 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
       }
     }
     
-    if (iterations >= maxIterations) {
-      setOptimizationProgress('Limite de iterações atingido');
-    } else {
-      setOptimizationProgress(`Otimização concluída em ${iterations} iterações`);
-    }
+    const finalDistance = calculateTotalRouteDistance(currentRoute);
+    const totalImprovement = initialDistance - finalDistance;
+    
+    console.log('Rota final:', currentRoute.map(p => p.lead.companyName));
+    console.log('Distância final:', finalDistance.toFixed(2), 'km');
+    console.log('Melhoria total:', totalImprovement.toFixed(2), 'km');
     
     // Atualizar a ordem dos pontos
     const optimizedPoints = currentRoute.map((point, index) => ({
@@ -477,22 +534,70 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
     }));
     
     setRoutePoints(optimizedPoints);
+    
+    if (iterations >= maxIterations) {
+      setOptimizationProgress(`Limite de iterações atingido. Melhoria: ${totalImprovement.toFixed(2)}km`);
+    } else {
+      setOptimizationProgress(`Otimização 3-Opt concluída! ${iterations} iterações. Melhoria: ${totalImprovement.toFixed(2)}km`);
+    }
+    
+    setTimeout(() => {
+      setOptimizationProgress('');
+    }, 3000);
+    
     setIsOptimizing(false);
   };
 
-  // Calcular distância total da rota
+  // Calcular distância total da rota (considerando vendedor se selecionado)
   const totalDistance = useMemo(() => {
     if (routePoints.length < 2) return 0;
     
     const sortedPoints = routePoints.sort((a, b) => a.order - b.order);
     let total = 0;
     
-    for (let i = 0; i < sortedPoints.length - 1; i++) {
-      total += calculateDistance(sortedPoints[i].coordinates, sortedPoints[i + 1].coordinates);
+    // Se há vendedor selecionado, incluir distâncias do vendedor
+    if (selectedSeller && selectedSeller.latitude && selectedSeller.longitude) {
+      const sellerCoords: [number, number] = [selectedSeller.latitude, selectedSeller.longitude];
+      
+      // Distância do vendedor para o primeiro ponto
+      const distToFirst = calculateDistance(sellerCoords, sortedPoints[0].coordinates);
+      total += distToFirst;
+      
+      // Distâncias entre pontos consecutivos
+      for (let i = 0; i < sortedPoints.length - 1; i++) {
+        const dist = calculateDistance(sortedPoints[i].coordinates, sortedPoints[i + 1].coordinates);
+        total += dist;
+      }
+      
+      // Distância do último ponto para o vendedor
+      const distFromLast = calculateDistance(sortedPoints[sortedPoints.length - 1].coordinates, sellerCoords);
+      total += distFromLast;
+      
+      // Debug log
+      console.log('Cálculo de distância com vendedor:', {
+        vendedor: selectedSeller.name,
+        vendedorCoords: sellerCoords,
+        pontos: sortedPoints.length,
+        distToFirst: distToFirst.toFixed(2),
+        distFromLast: distFromLast.toFixed(2),
+        total: total.toFixed(2)
+      });
+    } else {
+      // Se não há vendedor, calcular apenas distâncias entre pontos
+      for (let i = 0; i < sortedPoints.length - 1; i++) {
+        const dist = calculateDistance(sortedPoints[i].coordinates, sortedPoints[i + 1].coordinates);
+        total += dist;
+      }
+      
+      // Debug log
+      console.log('Cálculo de distância sem vendedor:', {
+        pontos: sortedPoints.length,
+        total: total.toFixed(2)
+      });
     }
     
     return total;
-  }, [routePoints]);
+  }, [routePoints, selectedSeller]);
 
   // Obter coordenadas da rota para o Polyline (incluindo vendedor se selecionado)
   const routeCoordinates = useMemo(() => {
@@ -597,7 +702,7 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
             <div className="leads-map-route-panel-header">
               <div>
                 <h3 className="leads-map-route-panel-title">Rota ({routePoints.length})</h3>
-                {routePoints.length >= 2 && (
+                {(routePoints.length >= 2 || (selectedSeller && routePoints.length >= 1)) && (
                   <p className="leads-map-route-panel-distance">
                     {totalDistance.toFixed(1)} km
                   </p>
@@ -609,9 +714,9 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                     onClick={optimizeRoute}
                     disabled={isOptimizing}
                     className="leads-map-route-optimize-button"
-                    title="Otimizar rota"
+                    title="Otimizar rota com algoritmo 3-Opt"
                   >
-                    {isOptimizing ? '⏳' : 'Calcular \nrota'}
+                    {isOptimizing ? '⏳' : 'Calcular rota'}
                   </button>
                 )}
                 {routePoints.length >= 2 && (
@@ -642,7 +747,9 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                 value={selectedSeller?.id || ''}
                 onChange={(e) => {
                   const seller = sellers.find(s => s.id === e.target.value);
-                  setSelectedSeller(seller || null);
+                  const newSeller = seller || null;
+                  setSelectedSeller(newSeller);
+                  recalculateRouteForSeller(newSeller);
                 }}
                 className="leads-map-route-seller-select"
               >
@@ -670,7 +777,7 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
               ) : (
                 <div className="leads-map-route-list">
                   {/* Ponto inicial do vendedor */}
-                  {selectedSeller && selectedSeller.latitude && selectedSeller.longitude && (
+                  {selectedSeller && (
                     <div className="leads-map-route-item leads-map-route-item-start">
                       <div className="leads-map-route-fixed-tag start">
                         <span className="leads-map-route-fixed-pin">🏠</span>
@@ -692,16 +799,16 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                       const itemClass = 'leads-map-route-item'; // Todos os pontos da rota são iguais agora
                       const finalClass = isHovered ? `${itemClass} leads-map-route-item-hovered` : itemClass;
                       return (
-                      <div 
-                        key={point.lead.id} 
-                        className={finalClass}
-                        onMouseEnter={() => {
-                          setHoveredRouteItem(point.lead.id);
-                        }}
-                        onMouseLeave={() => {
-                          setHoveredRouteItem(null);
-                        }}
-                      >
+                        <div 
+                          key={point.lead.id} 
+                          className={finalClass}
+                          onMouseEnter={() => {
+                            setHoveredRouteItem(point.lead.id);
+                          }}
+                          onMouseLeave={() => {
+                            setHoveredRouteItem(null);
+                          }}
+                        >
                         <div className="leads-map-route-item-number">
                           {point.order}
                         </div>
@@ -738,11 +845,12 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
                             ✕
                           </button>
                         </div>
-                      </div>
-                    );})}
+                        </div>
+                      );
+                    })}
                   
                   {/* Ponto final do vendedor */}
-                  {selectedSeller && selectedSeller.latitude && selectedSeller.longitude && routePoints.length > 0 && (
+                  {selectedSeller && routePoints.length > 0 && (
                     <div className="leads-map-route-item leads-map-route-item-end">
                       <div className="leads-map-route-fixed-tag end">
                         <span className="leads-map-route-fixed-pin">🏠</span>

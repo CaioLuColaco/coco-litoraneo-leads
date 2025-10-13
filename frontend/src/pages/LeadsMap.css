@@ -237,12 +237,13 @@
   top: 16px;
   left: 16px;
   width: 350px;
-  max-height: calc(100vh - 200px);
+  max-height: 70vh;
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   z-index: 1000;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .leads-map-route-panel-header {
@@ -294,7 +295,7 @@
   background: #FFFFFF;
   border: 1px solid #d1d5db;
   color: #6b7280;
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
   padding: 10px 6px;
   border-radius: 4px;
@@ -316,14 +317,14 @@
 }
 
 .leads-map-route-export-button span {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .leads-map-route-export-button {
   background: #10b981;
   border: 1px solid #10b981;
   color: white;
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
   padding: 4px 6px;
   border-radius: 4px;
@@ -390,8 +391,29 @@
 /* Animação para marcador em hover - agora controlada via props do CircleMarker */
 
 .leads-map-route-panel-content {
-  max-height: calc(100vh - 280px);
+  flex: 1;
   overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.leads-map-route-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.leads-map-route-panel-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.leads-map-route-panel-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.leads-map-route-panel-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* Modal genérico reaproveitando estética existente */
