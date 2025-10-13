@@ -1238,6 +1238,27 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
             </div>
           </div>
         </div>
+
+        {/* Componente do vendedor selecionado */}
+        {selectedSeller && (
+          <div className="leads-map-seller-info">
+            <div className="leads-map-seller-info-content">
+              {selectedSeller.imageUrl && (
+                <div className="leads-map-seller-info-photo">
+                  <img 
+                    src={selectedSeller.imageUrl} 
+                    alt={selectedSeller.name}
+                    className="leads-map-seller-info-img"
+                  />
+                </div>
+              )}
+              <div className="leads-map-seller-info-details">
+                <div className="leads-map-seller-info-name">{selectedSeller.name}</div>
+                <div className="leads-map-seller-info-region">{selectedSeller.responsibleRegion}</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
