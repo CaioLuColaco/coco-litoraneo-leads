@@ -123,6 +123,8 @@ export interface Seller {
   state: string;
   zipCode: string;
   responsibleRegion: string;
+  latitude?: number | null;
+  longitude?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -137,6 +139,8 @@ export interface CreateSellerRequest {
   state: string;
   zipCode: string;
   responsibleRegion: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 // Interfaces para sistema de pontuação configurável

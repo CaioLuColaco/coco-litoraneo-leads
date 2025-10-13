@@ -185,6 +185,13 @@ export const sellersAPI = {
     const response = await api.post<ApiResponse<Seller>>('/sellers', data);
     return response.data.data;
   },
+  update: async (id: string, data: Partial<Seller>): Promise<Seller> => {
+    const response = await api.put<ApiResponse<Seller>>(`/sellers/${id}`, data);
+    return response.data.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/sellers/${id}`);
+  },
 };
 
 export default api;

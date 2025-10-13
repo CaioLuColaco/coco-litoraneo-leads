@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { sellersAPI } from '../services/api';
 import { Seller, CreateSellerRequest } from '../types';
 import './LeadsMap.css';
@@ -9,6 +9,7 @@ const Sellers: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
+  const [isGeocoding, setIsGeocoding] = useState<boolean>(false);
   const [form, setForm] = useState<CreateSellerRequest>({
     name: '',
     birthDate: '',
@@ -20,7 +21,9 @@ const Sellers: React.FC = () => {
     zipCode: '',
     responsibleRegion: '',
   });
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const geocodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const fetchSellers = async () => {
@@ -44,6 +47,7 @@ const Sellers: React.FC = () => {
     { key: 'responsibleRegion', label: 'Região Responsável' },
     { key: 'city', label: 'Cidade' },
     { key: 'state', label: 'UF' },
+    { key: 'actions', label: 'Ações' },
   ], []);
 
   const openCreateModal = () => {
@@ -84,6 +88,47 @@ const Sellers: React.FC = () => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Geocodificar automaticamente quando endereço/cidade/UF/CEP mudarem
+  useEffect(() => {
+    if (geocodeTimeoutRef.current) {
+      clearTimeout(geocodeTimeoutRef.current);
+    }
+
+    geocodeTimeoutRef.current = setTimeout(async () => {
+      const { address, city, state, zipCode } = form;
+      const queryParts = [address, city, state, zipCode].filter(Boolean);
+      if (queryParts.length < 2) return; // precisa de pelo menos 2 partes para qualidade
+
+      try {
+        setIsGeocoding(true);
+        const q = encodeURIComponent(queryParts.join(', '));
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`;
+        const resp = await fetch(url, {
+          headers: { 'Accept': 'application/json' }
+        });
+        const data = await resp.json();
+        if (Array.isArray(data) && data.length > 0 && data[0].lat && data[0].lon) {
+          const lat = Number(data[0].lat);
+          const lon = Number(data[0].lon);
+          if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
+            setForm((prev) => ({ ...prev, latitude: lat, longitude: lon }));
+          }
+        }
+      } catch (e) {
+        // silenciar erros de geocodificação
+      } finally {
+        setIsGeocoding(false);
+      }
+    }, 700); // debounce 700ms
+
+    return () => {
+      if (geocodeTimeoutRef.current) {
+        clearTimeout(geocodeTimeoutRef.current);
+        geocodeTimeoutRef.current = null;
+      }
+    };
+  }, [form.address, form.city, form.state, form.zipCode]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (saving) return;
@@ -93,9 +138,17 @@ const Sellers: React.FC = () => {
 
     try {
       setSaving(true);
-      const created = await sellersAPI.create(form);
-      setSellers((prev) => [created, ...prev]);
+      let result: Seller;
+      if (editingId) {
+        const payload = { ...form } as any;
+        result = await sellersAPI.update(editingId, payload);
+        setSellers((prev) => prev.map((s) => s.id === editingId ? result : s));
+      } else {
+        result = await sellersAPI.create(form);
+        setSellers((prev) => [result, ...prev]);
+      }
       setIsCreating(false);
+      setEditingId(null);
     } catch (err) {
       setFormErrors({ _root: 'Falha ao criar vendedor. Tente novamente.' });
     } finally {
@@ -157,6 +210,46 @@ const Sellers: React.FC = () => {
                   <td>{s.responsibleRegion}</td>
                   <td>{s.city}</td>
                   <td>{s.state}</td>
+                  <td>
+                    <div className="row-actions" style={{ flexDirection: 'row', gap: '8px' }}>
+                      <button
+                        type="button"
+                        className="action-button edit"
+                        onClick={() => { setForm({
+                          name: s.name,
+                          birthDate: s.birthDate?.slice(0,10) || '',
+                          phone: s.phone,
+                          email: s.email,
+                          address: s.address,
+                          city: s.city,
+                          state: s.state,
+                          zipCode: s.zipCode,
+                          responsibleRegion: s.responsibleRegion,
+                          latitude: s.latitude ?? undefined,
+                          longitude: s.longitude ?? undefined,
+                        }); setEditingId(s.id); setIsCreating(true); }}
+                        title="Editar"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        type="button"
+                        className="action-button delete"
+                        onClick={async () => {
+                          if (!window.confirm('Confirmar exclusão deste vendedor?')) return;
+                          try {
+                            await sellersAPI.delete(s.id);
+                            setSellers((prev) => prev.filter((x) => x.id !== s.id));
+                          } catch (e) {
+                            alert('Falha ao excluir.');
+                          }
+                        }}
+                        title="Excluir"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {sellers.length === 0 && (
@@ -208,8 +301,17 @@ const Sellers: React.FC = () => {
                 </div>
                 <div className="leads-map-form-field">
                   <label>CEP</label>
-                  <input type="text" value={form.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} />
+                   <input type="text" value={form.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} />
+                   {isGeocoding && <span className="leads-map-form-error" style={{ color: '#6b7280' }}>Buscando coordenadas…</span>}
                 </div>
+                 <div className="leads-map-form-field">
+                   <label>Latitude (opcional)</label>
+                   <input type="number" step="any" value={form.latitude ?? ''} onChange={(e) => handleInputChange('latitude', e.target.value)} />
+                 </div>
+                 <div className="leads-map-form-field">
+                   <label>Longitude (opcional)</label>
+                   <input type="number" step="any" value={form.longitude ?? ''} onChange={(e) => handleInputChange('longitude', e.target.value)} />
+                 </div>
                 <div className="leads-map-form-field">
                   <label>Cidade</label>
                   <input type="text" value={form.city} onChange={(e) => handleInputChange('city', e.target.value)} />

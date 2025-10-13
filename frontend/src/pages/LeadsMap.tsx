@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Popup, CircleMarker, Polyline } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import { Lead } from '../types';
-import { leadsAPI } from '../services/api';
+import { leadsAPI, sellersAPI } from '../services/api';
+import { Seller } from '../types';
 
 // Importar CSS do Leaflet e do componente
 import 'leaflet/dist/leaflet.css';
@@ -39,6 +40,7 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationProgress, setOptimizationProgress] = useState('');
   const [hoveredRouteItem, setHoveredRouteItem] = useState<string | null>(null);
+  const [sellers, setSellers] = useState<Seller[]>([]);
   const hoverOpenTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
 
   // Limpar timeouts ao desmontar
@@ -67,6 +69,19 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
     };
 
     fetchLeads();
+  }, []);
+
+  // Buscar vendedores com coordenadas
+  useEffect(() => {
+    const fetchSellers = async () => {
+      try {
+        const data = await sellersAPI.getAll();
+        setSellers(data.filter((s) => typeof s.latitude === 'number' && typeof s.longitude === 'number'));
+      } catch (err) {
+        console.warn('Não foi possível carregar vendedores:', err);
+      }
+    };
+    fetchSellers();
   }, []);
 
   // Obter CNAEs únicos dos leads
@@ -814,6 +829,63 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
               </CircleMarker>
             );
           })}
+
+          {/* Marcadores de vendedores */}
+          {sellers.map((seller: Seller) => (
+            <CircleMarker
+              key={`seller-${seller.id}`}
+              center={[seller.latitude as number, seller.longitude as number]}
+              radius={12}
+              fillColor={'#8b5cf6'}
+              color={'#6d28d9'}
+              weight={4}
+              opacity={1}
+              fillOpacity={0.9}
+              eventHandlers={{
+                click: (e: any) => {
+                  e.target.openPopup();
+                },
+                mouseover: (e: any) => {
+                  const id = `seller-${seller.id}`;
+                  if (hoverOpenTimeoutsRef.current[id]) {
+                    clearTimeout(hoverOpenTimeoutsRef.current[id] as NodeJS.Timeout);
+                  }
+                  hoverOpenTimeoutsRef.current[id] = setTimeout(() => {
+                    e.target.openPopup();
+                    hoverOpenTimeoutsRef.current[id] = null;
+                  }, 250);
+                },
+                mouseout: (e: any) => {
+                  const id = `seller-${seller.id}`;
+                  if (hoverOpenTimeoutsRef.current[id]) {
+                    clearTimeout(hoverOpenTimeoutsRef.current[id] as NodeJS.Timeout);
+                    hoverOpenTimeoutsRef.current[id] = null;
+                  }
+                  setTimeout(() => {
+                    const popup = e.target.getPopup();
+                    if (popup && popup.getElement()) {
+                      const popupElement = popup.getElement();
+                      if (!popupElement.matches(':hover') && !e.target.getElement().matches(':hover')) {
+                        e.target.closePopup();
+                      }
+                    } else {
+                      e.target.closePopup();
+                    }
+                  }, 150);
+                }
+              }}
+            >
+              <Popup>
+                <div className="leads-map-popup">
+                  <h3 className="leads-map-popup-title">{seller.name}</h3>
+                  <p className="leads-map-popup-text"><strong>E-mail:</strong> {seller.email}</p>
+                  <p className="leads-map-popup-text"><strong>Telefone:</strong> {seller.phone}</p>
+                  <p className="leads-map-popup-text"><strong>Região:</strong> {seller.responsibleRegion}</p>
+                  <p className="leads-map-popup-text"><strong>Cidade/UF:</strong> {seller.city}/{seller.state}</p>
+                </div>
+              </Popup>
+            </CircleMarker>
+          ))}
         </MapContainer>
 
         {/* Legenda */}
@@ -831,6 +903,10 @@ export const LeadsMap: React.FC<LeadsMapProps> = () => {
             <div className="leads-map-legend-item">
               <div className="leads-map-legend-color" style={{ backgroundColor: '#dc2626' }}></div>
               <span className="leads-map-legend-text">Baixo Potencial</span>
+            </div>
+            <div className="leads-map-legend-item">
+              <div className="leads-map-legend-color" style={{ backgroundColor: '#8b5cf6' }}></div>
+              <span className="leads-map-legend-text">Vendedores</span>
             </div>
           </div>
         </div>
