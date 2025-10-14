@@ -1,12 +1,11 @@
 /* Estilos para o componente LeadsMap */
 html, body {
   height: 100%;
-  overflow: hidden; /* Remove scroll global */
   margin: 0;
   padding: 0;
 }
 .leads-map-container {
-  height: 100vh;
+  height: calc(100vh - 115px);
   width: 100vw;
   display: flex;
   flex-direction: column;
