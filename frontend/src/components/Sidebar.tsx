@@ -1,7 +1,7 @@
 import React, { ReactElement } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { PanelLeftDashed, SquareCheckBig, MapPinned, Users, Cog, Send } from 'lucide-react';
+import { SquareCheckBig, MapPinned, Users, Cog, Send } from 'lucide-react';
 
 export interface SidebarItem {
   path: string;
