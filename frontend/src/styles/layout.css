@@ -19,7 +19,7 @@
 }
 
 .sidebar--collapsed {
-  width: 44px;
+  width: 48px;
 }
 
 .sidebar__brand {
@@ -81,12 +81,12 @@
 .sidebar__user {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  justify-content: center;
 }
 
 .sidebar__greeting { color: #6b7280; font-size: 0.875rem; }
-.sidebar__username { color: #111827; font-weight: 500; }
+.sidebar__username { 
+  color: #111827; font-weight: 500; font-size: 14px; margin-right: 0.5rem;}
 
 .sidebar__logout {
   background-color: #f3f4f6;
@@ -98,7 +98,7 @@
 }
 
 .content { flex: 1; display: flex; flex-direction: column; }
-.content__header { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; }
+.content__header { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.5rem 0rem 0.5rem; }
 .content__sidebar-toggle {
   display: inline-flex;
   align-items: center;

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { leadsAPI } from '../services/api';
 import { UploadResponse } from '../types';
+import { PanelLeftDashed } from 'lucide-react';
 
 const LeadsEnviados: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
@@ -43,36 +44,11 @@ const LeadsEnviados: React.FC = () => {
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      const file = files[0];
-      // Simular seleção de arquivo
-      if (fileInputRef.current) {
-        fileInputRef.current.files = files;
-        handleFileUpload({ target: { files } } as any);
-      }
-    }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   return (
     <div className="container">
       <div className="page-header">
         <h1 className="page-title">
-          📤 Leads Enviados
+          <PanelLeftDashed className="inline-block mr-2" size={24}/> Leads Enviados
         </h1>
         <p className="page-description">
           Faça upload da planilha exportada pelo sistema Datlo para processar os leads.

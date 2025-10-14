@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { ReactElement } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { PanelLeftDashed, SquareCheckBig, MapPinned, Users, Cog, Send } from 'lucide-react';
 
 export interface SidebarItem {
   path: string;
   label: string;
-  icon?: string;
+  icon?: ReactElement<any, any>;
   requiredRoles?: string[];
 }
 
@@ -17,11 +18,11 @@ interface SidebarProps {
 }
 
 const menuItems: SidebarItem[] = [
-  { path: '/leads-enviados', label: 'Leads Enviados', icon: '📤' },
-  { path: '/leads-processados', label: 'Leads Processados', icon: '✅' },
-  { path: '/mapa', label: 'Mapa', icon: '🗺️' },
-  { path: '/vendedores', label: 'Vendedores', icon: '🧑‍💼' },
-  { path: '/configuracao-pontuacao', label: 'Configuração', icon: '⚙️' }
+  { path: '/leads-enviados', label: 'Enviar Leads', icon: <Send /> },
+  { path: '/leads-processados', label: 'Leads Processados', icon: <SquareCheckBig /> },
+  { path: '/mapa', label: 'Mapa', icon: <MapPinned /> },
+  { path: '/vendedores', label: 'Vendedores', icon: <Users /> },
+  { path: '/configuracao-pontuacao', label: 'Configuração', icon: <Cog /> }
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onCloseMobile, onToggleCollapse }) => {
@@ -69,7 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
             {!isCollapsed && (
               <>
                 <span className="sidebar__greeting">Olá,</span>
-                <span className="sidebar__username">{user?.name}</span>
+                <span className="sidebar__username">{" " + user?.name}</span>
               </>
             )}
           </div>
