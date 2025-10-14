@@ -2,6 +2,7 @@ import React from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import AppRouter from './components/AppRouter';
 import './App.css';
+import './styles/layout.css';
 
 function App() {
   return (

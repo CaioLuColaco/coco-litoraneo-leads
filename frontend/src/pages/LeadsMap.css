@@ -6,7 +6,7 @@ html, body {
 }
 .leads-map-container {
   height: calc(100vh - 115px);
-  width: 100vw;
+  width: 100%; /* usar largura do container, não da viewport */
   display: flex;
   flex-direction: column;
   background-color: #f9fafb;
@@ -139,7 +139,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  height: 100%;
 }
 
 .leads-map-loading-text {
@@ -150,7 +150,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  height: 100%;
 }
 
 .leads-map-error-text {
