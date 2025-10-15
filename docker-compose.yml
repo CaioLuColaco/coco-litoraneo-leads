@@ -40,6 +40,7 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+      - "5555:5555"
     environment:
       NODE_ENV: development
       DATABASE_URL: mysql://coco_user:coco_password_2024@mysql:3306/coco_litoraneo

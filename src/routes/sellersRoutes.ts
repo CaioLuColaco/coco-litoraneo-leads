@@ -4,16 +4,16 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 export const sellersRoutes = Router();
 
-sellersRoutes.get('/', async (req, res, next) => {
+sellersRoutes.get('/', async (_req, res, next) => {
   try {
     const sellers = await prisma.seller.findMany({ orderBy: { createdAt: 'desc' } });
-    res.json({ success: true, data: sellers, message: 'OK', timestamp: new Date().toISOString() });
+    return res.json({ success: true, data: sellers, message: 'OK', timestamp: new Date().toISOString() });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 });
 
-sellersRoutes.post('/', async (req, res, next) => {
+sellersRoutes.post('/', async (req, res) => {
   try {
     const {
       name,
@@ -54,7 +54,7 @@ sellersRoutes.post('/', async (req, res, next) => {
         imageUrl: req.body?.imageUrl ? String(req.body.imageUrl).trim() : null,
       },
     });
-    res.status(201).json({ success: true, data: seller, message: 'Created', timestamp: new Date().toISOString() });
+    return res.status(201).json({ success: true, data: seller, message: 'Created', timestamp: new Date().toISOString() });
   } catch (err: any) {
     console.error('Erro ao criar vendedor:', err?.message || err);
     return res.status(500).json({ success: false, message: 'Erro interno ao criar vendedor', timestamp: new Date().toISOString() });
