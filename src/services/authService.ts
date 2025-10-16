@@ -1,17 +1,20 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
-import { User, LoginRequest, RegisterRequest, AuthResponse } from '../types/lead';
+import { User, LoginRequest, RegisterRequest, AuthResponse, RefreshRequest, RefreshResponse } from '../types/lead';
 import { prisma } from '../config/database';
 
 export class AuthService {
   private readonly jwtSecret: string;
   private readonly jwtExpiresIn: string;
+  private readonly refreshExpiresInDays: number;
   private readonly prisma: PrismaClient;
 
   constructor() {
     this.jwtSecret = process.env.JWT_SECRET || 'coco-litoraneo-secret-key-2024';
     this.jwtExpiresIn = process.env.JWT_EXPIRES_IN || '7d';
+    this.refreshExpiresInDays = Number(process.env.REFRESH_EXPIRES_IN_DAYS || 30);
     this.prisma = prisma;
   }
 
@@ -43,14 +46,19 @@ export class AuthService {
       // Salvar usuário (por enquanto em memória, depois implementar repositório)
       await this.saveUser(newUser);
 
-      // Gerar token JWT
-      const token = this.generateToken(newUser);
+      // Revogar refresh tokens antigos (por política de única sessão)
+      await this.revokeAllRefreshTokensForUser(newUser.id);
+
+      // Gerar tokens
+      const accessToken = this.generateAccessToken(newUser);
+      const refreshToken = await this.generateAndStoreRefreshToken(newUser.id);
 
       // Retornar resposta sem a senha
       const { password, ...userWithoutPassword } = newUser;
 
       return {
-        token,
+        accessToken,
+        refreshToken,
         user: userWithoutPassword,
       };
     } catch (error) {
@@ -76,14 +84,19 @@ export class AuthService {
         throw new Error('Email ou senha incorretos');
       }
 
-      // Gerar token JWT
-      const token = this.generateToken(user);
+      // Política: uma sessão por usuário → revoga anteriores
+      await this.revokeAllRefreshTokensForUser(user.id);
+
+      // Gerar tokens
+      const accessToken = this.generateAccessToken(user);
+      const refreshToken = await this.generateAndStoreRefreshToken(user.id);
 
       // Retornar resposta sem a senha
       const { password, ...userWithoutPassword } = user;
 
       return {
-        token,
+        accessToken,
+        refreshToken,
         user: userWithoutPassword,
       };
     } catch (error) {
@@ -110,7 +123,7 @@ export class AuthService {
   /**
    * Gera um token JWT para um usuário
    */
-  private generateToken(user: User): string {
+  private generateAccessToken(user: User): string {
     const payload = {
       userId: user.id,
       userEmail: user.email,
@@ -119,6 +132,112 @@ export class AuthService {
 
     return jwt.sign(payload, this.jwtSecret, {
       expiresIn: this.jwtExpiresIn as any,
+    });
+  }
+
+  /**
+   * Gera um refresh token aleatório, persiste seu hash e retorna o token em texto puro.
+   */
+  private async generateAndStoreRefreshToken(userId: string): Promise<string> {
+    const token = crypto.randomBytes(64).toString('hex');
+    const tokenHash = this.sha256(token);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + this.refreshExpiresInDays);
+
+    await this.prisma.refreshToken.create({
+      data: {
+        userId,
+        tokenHash,
+        expiresAt,
+      },
+    });
+
+    return token;
+  }
+
+  private sha256(input: string): string {
+    return crypto.createHash('sha256').update(input).digest('hex');
+  }
+
+  /** Revoga todos os refresh tokens ativos de um usuário */
+  private async revokeAllRefreshTokensForUser(userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, isRevoked: false },
+      data: { isRevoked: true },
+    });
+  }
+
+  /** Efetua refresh rotacionando o token */
+  async refreshToken(payload: RefreshRequest): Promise<RefreshResponse> {
+    const { refreshToken } = payload;
+    if (!refreshToken) {
+      throw new Error('Refresh token não fornecido');
+    }
+
+    const tokenHash = this.sha256(refreshToken);
+    const existing = await this.prisma.refreshToken.findFirst({
+      where: { tokenHash, isRevoked: false },
+    });
+
+    if (!existing) {
+      throw new Error('Refresh token inválido');
+    }
+
+    if (existing.expiresAt < new Date()) {
+      // expiado → revoga
+      await this.prisma.refreshToken.update({
+        where: { id: existing.id },
+        data: { isRevoked: true },
+      });
+      throw new Error('Refresh token expirado');
+    }
+
+    const userDb = await this.prisma.user.findUnique({ where: { id: existing.userId } });
+    if (!userDb) {
+      throw new Error('Usuário não encontrado');
+    }
+
+    // Rotação: revoga o atual e cria um novo apontando para ele
+    await this.prisma.refreshToken.update({
+      where: { id: existing.id },
+      data: { isRevoked: true },
+    });
+
+    const newRefreshToken = crypto.randomBytes(64).toString('hex');
+    const newHash = this.sha256(newRefreshToken);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + this.refreshExpiresInDays);
+
+    await this.prisma.refreshToken.create({
+      data: {
+        userId: existing.userId,
+        tokenHash: newHash,
+        expiresAt,
+        rotatedFromId: existing.id,
+      },
+    });
+
+    const user: User = {
+      id: userDb.id,
+      name: userDb.name,
+      email: userDb.email,
+      password: userDb.password,
+      createdAt: userDb.createdAt.toISOString(),
+      updatedAt: userDb.updatedAt.toISOString(),
+    };
+
+    const accessToken = this.generateAccessToken(user);
+    return { accessToken, refreshToken: newRefreshToken };
+  }
+
+  /** Revoga um refresh token específico */
+  async logout(payload: RefreshRequest): Promise<void> {
+    const { refreshToken } = payload;
+    if (!refreshToken) return;
+    const tokenHash = this.sha256(refreshToken);
+    await this.prisma.refreshToken.updateMany({
+      where: { tokenHash, isRevoked: false },
+      data: { isRevoked: true },
     });
   }
 

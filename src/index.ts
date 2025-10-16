@@ -10,6 +10,8 @@ import { healthRoutes } from './routes/healthRoutes';
 import { authRoutes } from './routes/authRoutes';
 import { scoringRoutes } from './routes/scoringRoutes';
 import { sellersRoutes } from './routes/sellersRoutes';
+import { superAdminRoutes } from './routes/superAdminRoutes';
+import { companyMasterRoutes } from './routes/companyMasterRoutes';
 import { QueueService } from './services/queueService';
 import { ExcelProcessingService } from './services/excelProcessingService';
 import { AddressValidationService } from './services/addressValidationService';
@@ -28,7 +30,7 @@ const potentialAnalysisService = new PotentialAnalysisService();
 initializeServices(queueService, excelProcessingService, addressValidationService, potentialAnalysisService);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
 // Middleware de segurança
 app.use(helmet());
@@ -54,6 +56,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/scoring', scoringRoutes);
 app.use('/api/sellers', sellersRoutes);
+app.use('/api/superadmin', superAdminRoutes);
+app.use('/api/companies', companyMasterRoutes);
 
 // Middleware de tratamento de erros
 app.use(notFoundHandler);

@@ -1,0 +1,92 @@
+.access-denied-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem;
+}
+
+.access-denied-content {
+  background: white;
+  border-radius: 1rem;
+  padding: 3rem;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  width: 100%;
+}
+
+.access-denied-icon {
+  color: #ff6b6b;
+  margin-bottom: 2rem;
+}
+
+.access-denied-content h1 {
+  color: #333;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.access-denied-message {
+  color: #666;
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.access-denied-submessage {
+  color: #888;
+  font-size: 0.875rem;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.access-denied-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background-color: #4ecdc4;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #45b7b8;
+  transform: translateY(-2px);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .access-denied-container {
+    padding: 1rem;
+  }
+  
+  .access-denied-content {
+    padding: 2rem;
+  }
+  
+  .access-denied-content h1 {
+    font-size: 1.5rem;
+  }
+  
+  .access-denied-message {
+    font-size: 1rem;
+  }
+}

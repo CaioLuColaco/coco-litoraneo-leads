@@ -1,14 +1,30 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, LoginData, RegisterData } from '../types';
-import { authAPI } from '../services/api';
+import React, { createContext, useContext, useEffect, ReactNode } from 'react';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { 
+  loginUser, 
+  registerUser, 
+  logoutUser,
+  clearError,
+  setUser,
+  clearAuth
+} from '../store/slices/authSlice';
+import { 
+  selectUser, 
+  selectIsAuthenticated, 
+  selectAuthLoading, 
+  selectAuthError 
+} from '../store/selectors';
+import { LoginData, RegisterData } from '../types';
 
 interface AuthContextType {
-  user: User | null;
+  user: any | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  error: string | null;
   login: (data: LoginData) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,37 +42,41 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const dispatch = useAppDispatch();
+  const user = useAppSelector(selectUser);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const isLoading = useAppSelector(selectAuthLoading);
+  const error = useAppSelector(selectAuthError);
 
   useEffect(() => {
     // Verificar se há usuário salvo no localStorage
     const savedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
+    const accessToken = localStorage.getItem('accessToken');
     
-    if (savedUser && token) {
+    if (savedUser && accessToken) {
       try {
-        setUser(JSON.parse(savedUser));
+        const userData = JSON.parse(savedUser);
+        dispatch(setUser(userData));
       } catch (error) {
         console.error('Erro ao carregar usuário:', error);
         localStorage.removeItem('user');
-        localStorage.removeItem('token');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('activeCompanyId');
+        dispatch(clearAuth());
       }
     }
-    
-    setIsLoading(false);
-  }, []);
+  }, [dispatch]);
 
   const login = async (data: LoginData) => {
     try {
-      const response = await authAPI.login(data);
+      const result = await dispatch(loginUser(data)).unwrap();
       
-      const { token, user: userData } = response;
+      // Salvar tokens no localStorage
+      localStorage.setItem('accessToken', result.accessToken);
+      localStorage.setItem('refreshToken', result.refreshToken);
+      localStorage.setItem('user', JSON.stringify(result.user));
       
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      setUser(userData);
     } catch (error) {
       console.error('❌ Erro no login:', error);
       throw error;
@@ -65,32 +85,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (data: RegisterData) => {
     try {
-      const response = await authAPI.register(data);
+      const result = await dispatch(registerUser(data)).unwrap();
       
-      const { token, user: userData } = response;
+      // Salvar tokens no localStorage
+      localStorage.setItem('accessToken', result.accessToken);
+      localStorage.setItem('refreshToken', result.refreshToken);
+      localStorage.setItem('user', JSON.stringify(result.user));
       
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      setUser(userData);
     } catch (error) {
       console.error('Erro no registro:', error);
       throw error;
     }
   };
 
-  const logout = () => {
-    authAPI.logout();
-    setUser(null);
+  const logout = async () => {
+    try {
+      await dispatch(logoutUser()).unwrap();
+      
+      // Limpar localStorage
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('activeCompanyId');
+      
+    } catch (error) {
+      console.error('Erro no logout:', error);
+      // Mesmo com erro, limpar o estado local
+      dispatch(clearAuth());
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('activeCompanyId');
+    }
+  };
+
+  const clearErrorHandler = () => {
+    dispatch(clearError());
   };
 
   const value: AuthContextType = {
     user,
-    isAuthenticated: !!user,
+    isAuthenticated,
     isLoading,
+    error,
     login,
     register,
     logout,
+    clearError: clearErrorHandler,
   };
 
   return (

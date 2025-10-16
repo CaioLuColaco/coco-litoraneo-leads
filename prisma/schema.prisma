@@ -19,96 +19,159 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Multi-tenant (Fase 2)
+  companyId    String?
+  company      Company? @relation(fields: [companyId], references: [id])
+  isSuperAdmin Boolean  @default(false)
+  photoUrl     String?
+
   // Relacionamentos
-  leads     Lead[]
+  leads        Lead[]
+  RefreshToken RefreshToken[]
+  UserRole     UserRole[]
 
   @@map("users")
 }
 
+// Empresa (tenant)
+model Company {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  users       User[]
+  leads       Lead[]
+  sellers     Seller[]
+  routes      Routes[]
+  routeVisits RouteVisit[]
+
+  companyModules CompanyModule[]
+  roles          Role[]
+
+  @@map("companies")
+}
+
+// Catálogo de módulos (ex.: COMMERCIAL, FINANCE)
+model Module {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companies CompanyModule[]
+
+  @@map("modules")
+}
+
+// Contratação de módulos por empresa
+model CompanyModule {
+  id        String   @id @default(cuid())
+  companyId String
+  moduleId  String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+  module  Module  @relation(fields: [moduleId], references: [id])
+
+  @@unique([companyId, moduleId])
+  @@index([companyId])
+  @@index([moduleId])
+  @@map("company_modules")
+}
+
 // Modelo principal de leads
 model Lead {
-  id        String   @id @default(cuid())
-  cnpj      String   @unique
-  source    String   @default("datlo") // datlo, manual, other
-  
+  id     String @id @default(cuid())
+  cnpj   String @unique
+  source String @default("datlo") // datlo, manual, other
+
+  // Multi-tenant (Fase 2)
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
   // Dados da empresa
-  companyName    String
-  tradeName      String?
-  matrixName     String?
-  city           String
-  district       String
-  subdistrict    String
-  neighborhood   String
-  
+  companyName  String
+  tradeName    String?
+  matrixName   String?
+  city         String
+  district     String
+  subdistrict  String
+  neighborhood String
+
   // Endereço
-  streetAddress     String
-  suggestedAddress  String?
-  zipCode           String
-  coordinates       String? // formato: "-23.533853,-46.65335"
-  streetViewUrl     String?
-  
+  streetAddress    String
+  suggestedAddress String?
+  zipCode          String
+  coordinates      String? // formato: "-23.533853,-46.65335"
+  streetViewUrl    String?
+
   // Endereço validado
-  validatedStreet      String?
-  validatedNumber      String?
-  validatedComplement  String?
+  validatedStreet       String?
+  validatedNumber       String?
+  validatedComplement   String?
   validatedNeighborhood String?
-  validatedCity        String?
-  validatedState       String?
-  validatedZipCode     String?
-  validatedCoordinates Json? // { latitude: number, longitude: number }
-  
+  validatedCity         String?
+  validatedState        String?
+  validatedZipCode      String?
+  validatedCoordinates  Json? // { latitude: number, longitude: number }
+
   // Informações de contato
-  phone    String?
-  email    String?
-  website  String?
-  
+  phone   String?
+  email   String?
+  website String?
+
   // Informações do negócio
   industry           String?
   estimatedEmployees Int?
   estimatedRevenue   Float?
   products           Json? // array de strings
-  
+
   // Dados cadastrais da empresa
-  cnae               String? // Código CNAE
-  cnaeDescription    String? // Descrição da atividade CNAE
-  capitalSocial      Float?  // Capital social da empresa
-  foundationDate     DateTime? // Data de fundação
-  
+  cnae            String? // Código CNAE
+  cnaeDescription String? // Descrição da atividade CNAE
+  capitalSocial   Float? // Capital social da empresa
+  foundationDate  DateTime? // Data de fundação
+
   // Sócios/Parceiros
-  partners           Json? // Array de sócios: [{ name, cpf, participation, role }]
-  
+  partners Json? // Array de sócios: [{ name, cpf, participation, role }]
+
   // Validação
-  addressValidated      Boolean @default(false)
-  addressValidationDate DateTime?
+  addressValidated        Boolean   @default(false)
+  addressValidationDate   DateTime?
   addressValidationSource String?
-  
+
   // Análise de fachada (futuro)
-  facadeAnalyzed    Boolean @default(false)
+  facadeAnalyzed     Boolean   @default(false)
   facadeAnalysisDate DateTime?
-  facadeAnalysis    Json?
-  
+  facadeAnalysis     Json?
+
   // Potencial
-  potentialScore    Int     @default(0) // 0-100
-  potentialLevel    String  @default("baixo") // baixo, médio, alto
-  potentialFactors  Json    // array de strings
-  potentialConfidence Int   @default(0) // 0-100
-  
+  potentialScore      Int    @default(0) // 0-100
+  potentialLevel      String @default("baixo") // baixo, médio, alto
+  potentialFactors    Json // array de strings
+  potentialConfidence Int    @default(0) // 0-100
+
   // Status do processamento
-  status            String  @default("aguardando") // aguardando, processando, processado, erro
-  processingError   String?
-  
+  status          String  @default("aguardando") // aguardando, processando, processado, erro
+  processingError String?
+
   // Observações do usuário
-  userNotes         String?   // Campo para observações do usuário
-  
+  userNotes String? // Campo para observações do usuário
+
   // Metadados
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
-  // Relacionamentos
-  userId    String?
-  user      User?   @relation(fields: [userId], references: [id])
 
-  routeVisits RouteVisit[]
+  // Relacionamentos
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  routeVisits    RouteVisit[]
   // Jobs de processamento
   processingJobs ProcessingJob[] @relation("LeadProcessingJobs")
 
@@ -117,27 +180,27 @@ model Lead {
 
 // Modelo para jobs de processamento
 model ProcessingJob {
-  id        String   @id @default(cuid())
-  leadId    String
-  lead      Lead     @relation("LeadProcessingJobs", fields: [leadId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  leadId String
+  lead   Lead   @relation("LeadProcessingJobs", fields: [leadId], references: [id], onDelete: Cascade)
+
   // Status do job
-  status    String   @default("pending") // pending, processing, completed, failed
-  priority  Int      @default(0) // 0 = baixa, 1 = normal, 2 = alta
-  
+  status   String @default("pending") // pending, processing, completed, failed
+  priority Int    @default(0) // 0 = baixa, 1 = normal, 2 = alta
+
   // Progresso
   currentStep String? // address_validation, cnpj_analysis, potential_calculation
-  progress   Int      @default(0) // 0-100
-  
+  progress    Int     @default(0) // 0-100
+
   // Resultados
-  result    Json?
-  error     String?
-  
+  result Json?
+  error  String?
+
   // Metadados
-  createdAt DateTime @default(now())
-  startedAt DateTime?
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
   completedAt DateTime?
-  
+
   // Redis job ID
   redisJobId String?
 
@@ -146,130 +209,186 @@ model ProcessingJob {
 
 // Modelo para cache de CEPs
 model CepCache {
-  cep         String   @id
-  data        Json
-  createdAt   DateTime @default(now())
-  expiresAt   DateTime
-  
+  cep       String   @id
+  data      Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
   @@map("cep_cache")
 }
 
 // Modelo para logs de processamento
 model ProcessingLog {
-  id        String   @id @default(cuid())
-  leadId    String?
-  jobId     String?
-  
+  id     String  @id @default(cuid())
+  leadId String?
+  jobId  String?
+
   // Informações do log
-  level     String   // info, warn, error
-  message   String
-  details   Json?
-  
+  level   String // info, warn, error
+  message String
+  details Json?
+
   // Metadados
   createdAt DateTime @default(now())
-  
+
   @@map("processing_logs")
 }
 
 // Modelo para configurações de pontuação
 model ScoringConfig {
-  id          String   @id @default(cuid())
-  name        String   // Nome da configuração (ex: "Configuração Padrão")
-  description String?  // Descrição opcional
-  isActive    Boolean  @default(true) // Se é a configuração ativa
-  
+  id          String  @id @default(cuid())
+  name        String // Nome da configuração (ex: "Configuração Padrão")
+  description String? // Descrição opcional
+  isActive    Boolean @default(true) // Se é a configuração ativa
+
   // Categorias de pontuação
-  categories  ScoringCategory[]
-  
+  categories ScoringCategory[]
+
   // Metadados
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?  // ID do usuário que criou
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String? // ID do usuário que criou
+
   @@map("scoring_configs")
 }
 
 // Modelo para categorias de pontuação
 model ScoringCategory {
-  id          String   @id @default(cuid())
-  configId    String
-  config      ScoringConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
-  
-  name        String   // Nome da categoria (ex: "CNAEs de Alto Potencial")
-  type        String   // Tipo da categoria (cnae, region, capital, foundation, etc.)
-  points      Int      // Pontos base para esta categoria
-  description String?  // Descrição da categoria
-  
+  id       String        @id @default(cuid())
+  configId String
+  config   ScoringConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  name        String // Nome da categoria (ex: "CNAEs de Alto Potencial")
+  type        String // Tipo da categoria (cnae, region, capital, foundation, etc.)
+  points      Int // Pontos base para esta categoria
+  description String? // Descrição da categoria
+
   // Critérios específicos da categoria
-  criteria    ScoringCriteria[]
-  
+  criteria ScoringCriteria[]
+
   // Metadados
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("scoring_categories")
 }
 
 // Modelo para critérios específicos de cada categoria
 model ScoringCriteria {
-  id          String   @id @default(cuid())
-  categoryId  String
-  category    ScoringCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  
-  name        String   // Nome do critério (ex: "4721100 - Padaria")
-  value       String   // Valor do critério (ex: "4721100" para CNAE)
-  points      Int      // Pontos específicos para este critério
-  description String?  // Descrição do critério
-  
+  id         String          @id @default(cuid())
+  categoryId String
+  category   ScoringCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  name        String // Nome do critério (ex: "4721100 - Padaria")
+  value       String // Valor do critério (ex: "4721100" para CNAE)
+  points      Int // Pontos específicos para este critério
+  description String? // Descrição do critério
+
   // Metadados
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("scoring_criteria")
 }
 
 model Seller {
-  id        String   @id @default(cuid())
-  name      String
-  birthDate DateTime
-  phone     String
-  email     String   @unique
-  address   String
-  city      String
-  state     String
-  zipCode   String
+  id                String   @id @default(cuid())
+  name              String
+  birthDate         DateTime
+  phone             String
+  email             String   @unique
+  address           String
+  city              String
+  state             String
+  zipCode           String
   responsibleRegion String
-  latitude  Float?
-  longitude Float?
-  imageUrl  String?
-  routes Routes[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  latitude          Float?
+  longitude         Float?
+  imageUrl          String?
+  // Multi-tenant (Fase 2)
+  companyId         String?
+  company           Company? @relation(fields: [companyId], references: [id])
+  routes            Routes[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@map("sellers")
 }
 
 model Routes {
-  id        String   @id @default(cuid())
-  sellerId  String
-  seller    Seller @relation(fields: [sellerId], references: [id])
+  id          String       @id @default(cuid())
+  sellerId    String
+  seller      Seller       @relation(fields: [sellerId], references: [id])
   routeVisits RouteVisit[]
+  // Multi-tenant (Fase 2)
+  companyId   String?
+  company     Company?     @relation(fields: [companyId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("routes")
+}
+
+// RBAC por empresa (Fase 4)
+model Role {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  name      String
+  scopes    Json // array de strings, ex.: ["commercial.read", "commercial.manage"]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("routes")
+  users UserRole[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("roles")
+}
+
+model UserRole {
+  id     String @id @default(cuid())
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id])
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
 }
 
 model RouteVisit {
   id        String   @id @default(cuid())
   routeId   String
-  route     Routes @relation(fields: [routeId], references: [id])
+  route     Routes   @relation(fields: [routeId], references: [id])
   leadId    String
-  lead      Lead @relation(fields: [leadId], references: [id])
+  lead      Lead     @relation(fields: [leadId], references: [id])
   visitDate DateTime
-  
+  // Multi-tenant (Fase 2)
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("route_visits")
+}
+
+// Gerenciamento de refresh tokens para autenticação (Fase 1)
+model RefreshToken {
+  id            String         @id @default(cuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash     String
+  isRevoked     Boolean        @default(false)
+  expiresAt     DateTime
+  createdAt     DateTime       @default(now())
+  rotatedFromId String?
+  rotatedFrom   RefreshToken?  @relation("RotatedFrom", fields: [rotatedFromId], references: [id])
+  rotatedTo     RefreshToken[] @relation("RotatedFrom")
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }

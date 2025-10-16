@@ -2,6 +2,56 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  companyId?: string;
+  isSuperAdmin: boolean;
+  photoUrl?: string;
+  company?: Company;
+  roles?: UserRole[];
+  scopes?: string[];
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Module {
+  id: string;
+  key: string;
+  name: string;
+}
+
+export interface Role {
+  id: string;
+  companyId: string;
+  name: string;
+  scopes: string[];
+}
+
+export interface UserRole {
+  id: string;
+  userId: string;
+  roleId: string;
+  role: Role;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: User;
+}
+
+export interface ProfileUpdateData {
+  name?: string;
+  email?: string;
+  photoUrl?: string;
+}
+
+export interface PasswordChangeData {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export interface LoginData {

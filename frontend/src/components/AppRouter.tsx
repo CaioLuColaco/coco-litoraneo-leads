@@ -9,6 +9,13 @@ import LeadsProcessados from '../pages/LeadsProcessados';
 import { LeadsMap } from '../pages/LeadsMap';
 import { ScoringConfig } from '../pages/ScoringConfig';
 import Sellers from '../pages/Sellers';
+import Profile from '../pages/Profile';
+import AccessDenied from '../pages/AccessDenied';
+import ProtectedRoute from './ProtectedRoute';
+import SuperAdminCompanies from '../pages/SuperAdmin/Companies';
+import SuperAdminUsers from '../pages/SuperAdmin/Users';
+import CompanyMasterUsers from '../pages/CompanyMaster/Users';
+import CompanyMasterRoles from '../pages/CompanyMaster/Roles';
 import AuthForm from './AuthForm';
 
 const AppRouter: React.FC = () => {
@@ -45,11 +52,53 @@ const AppRouter: React.FC = () => {
           >
             <Routes>
               <Route path="/" element={<Navigate to="/leads-enviados" replace />} />
-              <Route path="/leads-enviados" element={<LeadsEnviados />} />
-              <Route path="/leads-processados" element={<LeadsProcessados />} />
-              <Route path="/mapa" element={<LeadsMap />} />
-              <Route path="/configuracao-pontuacao" element={<ScoringConfig />} />
-              <Route path="/vendedores" element={<Sellers />} />
+              <Route path="/leads-enviados" element={
+                <ProtectedRoute moduleKey="COMMERCIAL">
+                  <LeadsEnviados />
+                </ProtectedRoute>
+              } />
+              <Route path="/leads-processados" element={
+                <ProtectedRoute moduleKey="COMMERCIAL">
+                  <LeadsProcessados />
+                </ProtectedRoute>
+              } />
+              <Route path="/mapa" element={
+                <ProtectedRoute moduleKey="COMMERCIAL">
+                  <LeadsMap />
+                </ProtectedRoute>
+              } />
+              <Route path="/configuracao-pontuacao" element={
+                <ProtectedRoute moduleKey="FINANCE">
+                  <ScoringConfig />
+                </ProtectedRoute>
+              } />
+              <Route path="/vendedores" element={
+                <ProtectedRoute moduleKey="COMMERCIAL">
+                  <Sellers />
+                </ProtectedRoute>
+              } />
+              <Route path="/perfil" element={<Profile />} />
+              <Route path="/superadmin/companies" element={
+                <ProtectedRoute permission="superadmin.companies">
+                  <SuperAdminCompanies />
+                </ProtectedRoute>
+              } />
+              <Route path="/superadmin/users" element={
+                <ProtectedRoute permission="superadmin.users">
+                  <SuperAdminUsers />
+                </ProtectedRoute>
+              } />
+              <Route path="/company/users" element={
+                <ProtectedRoute permission="users.manage">
+                  <CompanyMasterUsers />
+                </ProtectedRoute>
+              } />
+              <Route path="/company/roles" element={
+                <ProtectedRoute permission="roles.manage">
+                  <CompanyMasterRoles />
+                </ProtectedRoute>
+              } />
+              <Route path="/access-denied" element={<AccessDenied />} />
               <Route path="*" element={<Navigate to="/leads-enviados" replace />} />
             </Routes>
           </AppLayout>
