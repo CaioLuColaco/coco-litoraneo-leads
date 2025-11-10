@@ -33,11 +33,8 @@ const PORT = process.env.PORT || 3000;
 // Middleware de segurança
 app.use(helmet());
 
-// Middleware de CORS (aberto temporariamente para todas as origens)
 app.use(cors({
-  origin: true,
-  credentials: true,
-  allowedHeaders: '*',
+  origin: '*',
   methods: '*',
 }));
 
