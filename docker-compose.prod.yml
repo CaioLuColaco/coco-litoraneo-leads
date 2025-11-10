@@ -23,6 +23,8 @@ services:
       dockerfile: Dockerfile.backend
     container_name: coco-backend
     restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
     env_file:
       - .env
     ports:
