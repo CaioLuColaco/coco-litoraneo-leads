@@ -58,7 +58,7 @@ const AuthForm: React.FC = () => {
             {isLogin ? 'Entrar na sua conta' : 'Criar nova conta'}
           </h2>
           <p style={{ marginTop: '0.5rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280' }}>
-            {isLogin ? 'Ou ' : 'Já tem uma conta? '}
+            {isLogin ? 'Ou ' : 'Você já tem uma conta? '}
             <button
               type="button"
               onClick={toggleMode}
