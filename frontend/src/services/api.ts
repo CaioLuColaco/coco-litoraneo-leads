@@ -16,10 +16,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 export const apiBaseUrl = API_BASE_URL;
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: API_BASE_URL
 });
 
 // Interceptor para adicionar token de autenticação
@@ -28,6 +25,15 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  
+  // Log para debug (remover depois)
+  if (config.data instanceof FormData) {
+    console.log('📤 FormData detectado, headers:', {
+      Authorization: config.headers.Authorization ? 'Presente' : 'Ausente',
+      'Content-Type': config.headers['Content-Type'] || 'Será definido automaticamente'
+    });
+  }
+  
   return config;
 });
 
@@ -96,12 +102,34 @@ export const leadsAPI = {
     const formData = new FormData();
     formData.append('file', file);
     
-    const response = await api.post<ApiResponse<UploadResponse>>('/leads/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data.data;
+    try {
+      // Log para debug
+      console.log('📤 Enviando arquivo:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: `${API_BASE_URL}/leads/upload`
+      });
+      
+      const token = localStorage.getItem('token');
+      console.log('🔑 Token presente:', !!token);
+      
+      const response = await api.post<ApiResponse<UploadResponse>>('/leads/upload', formData);
+      return response.data.data;
+    } catch (error: any) {
+      console.error('❌ Erro no upload:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers
+        }
+      });
+      throw error;
+    }
   },
 
   // Exportar leads processados
